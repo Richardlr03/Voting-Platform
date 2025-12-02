@@ -22,10 +22,10 @@
         <hr class="my-4">
       {% endif %}
 
-            {% if motions %}
+      {% if motions %}
         <p class="mb-3">
           Below are the motions available for this meeting.
-          Please select one option for each motion you wish to vote on, then submit your votes.
+          Please select your choices and submit your votes.
         </p>
 
         <form method="POST" action="{{ url_for('voter_page', code=voter.code) }}">
@@ -35,34 +35,74 @@
                 <h2 class="h5 mb-1">{{ motion.title }}</h2>
                 <p class="text-muted mb-2">
                   Type: {{ motion.type }} &middot; Status: {{ motion.status }}
+                  {% if motion.type == "PREFERENCE" and motion.num_winners %}
+                    &middot; Winners: {{ motion.num_winners }}
+                  {% endif %}
                 </p>
 
                 {% if motion.options %}
-                  <div class="ms-2">
-                    {% if motion.type == "YES_NO" %}
-                      <p class="fw-semibold mb-1">Choose one option:</p>
-                    {% elif motion.type == "CANDIDATE" %}
-                      <p class="fw-semibold mb-1">Choose one candidate:</p>
-                    {% endif %}
+                  {% if motion.type == "PREFERENCE" %}
+                    <div class="ms-2">
+                      <p class="fw-semibold mb-1">
+                        Rank the candidates (1 = highest preference).
+                        You can leave some blank if you don't want to rank them all.
+                      </p>
 
-                    {% set existing_vote = votes_by_motion.get(motion.id) if votes_by_motion else None %}
-
-                    {% for opt in motion.options %}
-                      <div class="form-check">
-                        <input
-                          class="form-check-input"
-                          type="radio"
-                          name="motion_{{ motion.id }}"
-                          id="motion_{{ motion.id }}_opt_{{ opt.id }}"
-                          value="{{ opt.id }}"
-                          {% if existing_vote and existing_vote.option_id == opt.id %}checked{% endif %}
-                        >
-                        <label class="form-check-label" for="motion_{{ motion.id }}_opt_{{ opt.id }}">
-                          {{ opt.text }}
-                        </label>
+                      <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                          <thead>
+                            <tr>
+                              <th>Candidate</th>
+                              <th style="width: 120px;">Rank</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for opt in motion.options %}
+                              <tr>
+                                <td>{{ opt.text }}</td>
+                                <td>
+                                  <input
+                                    type="number"
+                                    class="form-control form-control-sm"
+                                    name="motion_{{ motion.id }}_opt_{{ opt.id }}_rank"
+                                    min="1"
+                                    max="{{ motion.options|length }}"
+                                  >
+                                </td>
+                              </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
                       </div>
-                    {% endfor %}
-                  </div>
+                    </div>
+                  {% else %}
+                    {# YES_NO and CANDIDATE – single choice #}
+                    <div class="ms-2">
+                      {% if motion.type == "YES_NO" %}
+                        <p class="fw-semibold mb-1">Choose one option:</p>
+                      {% elif motion.type == "CANDIDATE" %}
+                        <p class="fw-semibold mb-1">Choose one candidate:</p>
+                      {% endif %}
+
+                      {% set existing_vote = votes_by_motion.get(motion.id) if votes_by_motion else None %}
+
+                      {% for opt in motion.options %}
+                        <div class="form-check">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="motion_{{ motion.id }}"
+                            id="motion_{{ motion.id }}_opt_{{ opt.id }}"
+                            value="{{ opt.id }}"
+                            {% if existing_vote and existing_vote.option_id == opt.id %}checked{% endif %}
+                          >
+                          <label class="form-check-label" for="motion_{{ motion.id }}_opt_{{ opt.id }}">
+                            {{ opt.text }}
+                          </label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
                 {% else %}
                   <p class="text-muted"><em>No options defined for this motion yet.</em></p>
                 {% endif %}

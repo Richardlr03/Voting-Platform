@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import and_
 import uuid
 import os
 
@@ -79,6 +80,10 @@ class Vote(db.Model):
     voter_id = db.Column(db.Integer, db.ForeignKey("voters.id"), nullable=False)
     motion_id = db.Column(db.Integer, db.ForeignKey("motions.id"), nullable=False)
     option_id = db.Column(db.Integer, db.ForeignKey("options.id"), nullable=False)
+
+    # For preference voting: 1 = first preference, 2 = second, etc.
+    # For normal motions, this stays NULL.
+    preference_rank = db.Column(db.Integer, nullable=True)
 
 def generate_voter_code():
     # 8-character uppercase code, e.g. 'A1B2C3D4'
@@ -248,51 +253,93 @@ def voter_page(code):
     meeting = voter.meeting
     motions = meeting.motions
 
-    # Map existing votes for this voter, keyed by motion_id
-    votes_by_motion = {vote.motion_id: vote for vote in voter.votes}
+    # For non-preference motions, we still want a simple "one vote per motion" mapping
+    simple_votes_by_motion = {
+        vote.motion_id: vote
+        for vote in voter.votes
+        if vote.preference_rank is None
+    }
 
     if request.method == "POST":
-        # Process submitted choices
         for motion in motions:
-            field_name = f"motion_{motion.id}"
-            selected_option_id = request.form.get(field_name)
+            # Preference voting: ranked ballot
+            if motion.type == "PREFERENCE":
+                # Delete existing preference votes for this voter & motion
+                existing_pref_votes = Vote.query.filter(
+                    and_(
+                        Vote.voter_id == voter.id,
+                        Vote.motion_id == motion.id,
+                        Vote.preference_rank.isnot(None),
+                    )
+                ).all()
+                for ev in existing_pref_votes:
+                    db.session.delete(ev)
 
-            if not selected_option_id:
-                # Voter left this motion blank
-                continue
+                # Read all rank inputs for this motion
+                ranks = []  # list of (rank, option_id)
+                for opt in motion.options:
+                    field_name = f"motion_{motion.id}_opt_{opt.id}_rank"
+                    value = request.form.get(field_name)
 
-            try:
-                option_id_int = int(selected_option_id)
-            except ValueError:
-                continue
+                    if not value:
+                        continue
 
-            existing_vote = votes_by_motion.get(motion.id)
+                    try:
+                        rank = int(value)
+                    except ValueError:
+                        continue
 
-            if existing_vote:
-                # Update existing vote for this motion
-                existing_vote.option_id = option_id_int
+                    if rank <= 0:
+                        continue
+
+                    ranks.append((rank, opt.id))
+
+                # Save new preference votes (one row per ranked option)
+                for rank, opt_id in ranks:
+                    db.session.add(Vote(
+                        voter_id=voter.id,
+                        motion_id=motion.id,
+                        option_id=opt_id,
+                        preference_rank=rank,
+                    ))
+
             else:
-                # Create a new vote
-                new_vote = Vote(
-                    voter_id=voter.id,
-                    motion_id=motion.id,
-                    option_id=option_id_int,
-                )
-                db.session.add(new_vote)
+                # Existing behaviour: YES_NO or CANDIDATE (single choice)
+                field_name = f"motion_{motion.id}"
+                selected_option_id = request.form.get(field_name)
+
+                if not selected_option_id:
+                    continue
+
+                try:
+                    option_id_int = int(selected_option_id)
+                except ValueError:
+                    continue
+
+                existing_vote = simple_votes_by_motion.get(motion.id)
+
+                if existing_vote:
+                    existing_vote.option_id = option_id_int
+                else:
+                    db.session.add(Vote(
+                        voter_id=voter.id,
+                        motion_id=motion.id,
+                        option_id=option_id_int,
+                        preference_rank=None,
+                    ))
 
         db.session.commit()
-        flash("Your votes have been recorded. You can revisit this link to review or change them while voting is open.", "success")
-
+        flash("Your votes have been recorded (including any preferences).", "success")
         return redirect(url_for("voter_page", code=voter.code))
 
-    # GET → show page with existing selections (if any)
+    # GET – we only pre-fill non-preference votes for now
     return render_template(
         "voter/vote.html",
         invalid=False,
         voter=voter,
         meeting=meeting,
         motions=motions,
-        votes_by_motion=votes_by_motion,
+        votes_by_motion=simple_votes_by_motion,
     )
 
 if __name__ == "__main__":
