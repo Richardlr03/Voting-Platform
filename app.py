@@ -177,5 +177,32 @@ def create_voter(meeting_id):
     # GET -> show form
     return render_template("admin/create_voter.html", meeting=meeting)
 
+@app.route("/vote/<code>")
+def voter_page(code):
+    # Look up voter by their unique code
+    voter = Voter.query.filter_by(code=code).first()
+
+    if not voter:
+        # Invalid code: show a friendly error page
+        return render_template(
+            "voter/vote.html",
+            invalid=True,
+            voter=None,
+            meeting=None,
+            motions=None,
+        )
+
+    meeting = voter.meeting  # thanks to relationship backref
+    # For now, show all motions; later we might filter by status == "OPEN"
+    motions = meeting.motions
+
+    return render_template(
+        "voter/vote.html",
+        invalid=False,
+        voter=voter,
+        meeting=meeting,
+        motions=motions,
+    )
+
 if __name__ == "__main__":
     app.run(debug=True)
