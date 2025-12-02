@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+import uuid
 import os
 
 app = Flask(__name__)
@@ -76,6 +77,9 @@ class Vote(db.Model):
     motion_id = db.Column(db.Integer, db.ForeignKey("motions.id"), nullable=False)
     option_id = db.Column(db.Integer, db.ForeignKey("options.id"), nullable=False)
 
+def generate_voter_code():
+    # 8-character uppercase code, e.g. 'A1B2C3D4'
+    return uuid.uuid4().hex[:8].upper()
 
 # --- Routes ---
 
@@ -148,6 +152,30 @@ def create_motion(meeting_id):
 
     # GET → show form
     return render_template("admin/create_motion.html", meeting=meeting)
+
+@app.route("/admin/meetings/<int:meeting_id>/voters/new", methods=["GET", "POST"])
+def create_voter(meeting_id):
+    meeting = Meeting.query.get_or_404(meeting_id)
+
+    if request.method == "POST":
+        name = request.form.get("name")
+
+        # Generate a unique code. In a real app you'd loop until unique;
+        # for now we assume low collision chance.
+        code = generate_voter_code()
+
+        voter = Voter(
+            meeting_id=meeting.id,
+            name=name,
+            code=code,
+        )
+        db.session.add(voter)
+        db.session.commit()
+
+        return redirect(url_for("meeting_detail", meeting_id=meeting.id))
+
+    # GET -> show form
+    return render_template("admin/create_voter.html", meeting=meeting)
 
 if __name__ == "__main__":
     app.run(debug=True)

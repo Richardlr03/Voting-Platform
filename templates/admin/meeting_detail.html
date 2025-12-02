@@ -50,6 +50,11 @@
       <div class="col-md-6 mb-4">
         <h2 class="h4 mb-3">Voters</h2>
 
+        <a href="{{ url_for('create_voter', meeting_id=meeting.id) }}" class="btn btn-sm btn-primary mb-3">
+          + Add Voter
+        </a>
+
+
         {% if meeting.voters %}
           <p class="text-muted">Total voters: {{ meeting.voters|length }}</p>
           <ul class="list-group">
