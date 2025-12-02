@@ -15,6 +15,10 @@
       <p class="text-muted"><em>No description provided.</em></p>
     {% endif %}
 
+    <a href="{{ url_for('meeting_results', meeting_id=meeting.id) }}" class="btn btn-outline-primary mb-4">
+      View Results
+    </a>
+
     <hr class="my-4">
 
     <div class="row">

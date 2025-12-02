@@ -177,6 +177,46 @@ def create_voter(meeting_id):
     # GET -> show form
     return render_template("admin/create_voter.html", meeting=meeting)
 
+@app.route("/admin/meetings/<int:meeting_id>/results")
+def meeting_results(meeting_id):
+    meeting = Meeting.query.get_or_404(meeting_id)
+
+    results = []
+
+    for motion in meeting.motions:
+        # Initialize counts per option
+        option_counts = {opt.id: 0 for opt in motion.options}
+
+        # Count votes
+        for vote in motion.votes:
+            if vote.option_id in option_counts:
+                option_counts[vote.option_id] += 1
+
+        total_votes = sum(option_counts.values())
+
+        option_results = []
+        for opt in motion.options:
+            count = option_counts[opt.id]
+            percent = (count / total_votes * 100) if total_votes > 0 else 0
+            option_results.append({
+                "option": opt,
+                "count": count,
+                "percent": percent,
+            })
+
+        results.append({
+            "motion": motion,
+            "total_votes": total_votes,
+            "option_results": option_results,
+        })
+
+    return render_template(
+        "admin/meeting_results.html",
+        meeting=meeting,
+        results=results,
+    )
+
+
 @app.route("/vote/<code>", methods=["GET", "POST"])
 def voter_page(code):
     voter = Voter.query.filter_by(code=code).first()

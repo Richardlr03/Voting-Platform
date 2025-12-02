@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="py-4">
+    <a href="{{ url_for('meeting_detail', meeting_id=meeting.id) }}" class="btn btn-link">
+      &larr; Back to meeting
+    </a>
+
+    <h1 class="mb-1">Results – {{ meeting.title }}</h1>
+    <p class="text-muted mb-4">
+      Meeting ID: {{ meeting.id }}
+    </p>
+
+    {% if results %}
+      {% for item in results %}
+        {% set motion = item.motion %}
+        <div class="card mb-4">
+          <div class="card-body">
+            <h2 class="h5 card-title mb-1">{{ motion.title }}</h2>
+            <p class="text-muted mb-3">
+              Type: {{ motion.type }} &middot; Status: {{ motion.status }}<br>
+              Total votes: {{ item.total_votes }}
+            </p>
+
+            {% if item.total_votes == 0 %}
+              <div class="alert alert-info mb-0">
+                No votes have been cast for this motion yet.
+              </div>
+            {% else %}
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Option</th>
+                    <th style="width: 20%;">Votes</th>
+                    <th style="width: 20%;">Percent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for res in item.option_results %}
+                    <tr>
+                      <td>{{ res.option.text }}</td>
+                      <td>{{ res.count }}</td>
+                      <td>{{ "%.1f"|format(res.percent) }}%</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-info">
+        There are no motions configured for this meeting yet.
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
