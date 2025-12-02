@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="py-4">
+    <a href="{{ url_for('meeting_detail', meeting_id=meeting.id) }}" class="btn btn-link">
+      &larr; Back to meeting
+    </a>
+
+    <h1 class="mb-3">Add Motion to: {{ meeting.title }}</h1>
+
+    <form method="POST" action="{{ url_for('create_motion', meeting_id=meeting.id) }}">
+      <div class="mb-3">
+        <label for="title" class="form-label">Motion Title</label>
+        <input type="text" name="title" id="title" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="type" class="form-label">Motion Type</label>
+        <select name="type" id="type" class="form-select" required>
+          <option value="YES_NO">Yes / No / Abstain</option>
+          <option value="CANDIDATE">Candidate election (choose 1)</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="candidates" class="form-label">
+          Candidates (one per line) <small class="text-muted">(only for Candidate type)</small>
+        </label>
+        <textarea
+          name="candidates"
+          id="candidates"
+          class="form-control"
+          rows="4"
+          placeholder="Alice&#10;Bob&#10;Charlie"
+        ></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-success">Create Motion</button>
+      <a href="{{ url_for('meeting_detail', meeting_id=meeting.id) }}" class="btn btn-secondary">Cancel</a>
+    </form>
+  </div>
+
+  <script>
+    // Optional: simple UX so textarea is greyed when not needed
+    const typeSelect = document.getElementById("type");
+    const candidatesField = document.getElementById("candidates");
+
+    function toggleCandidates() {
+      const isCandidate = typeSelect.value === "CANDIDATE";
+      candidatesField.disabled = !isCandidate;
+      candidatesField.classList.toggle("bg-light", !isCandidate);
+    }
+
+    typeSelect.addEventListener("change", toggleCandidates);
+    toggleCandidates();
+  </script>
+{% endblock %}

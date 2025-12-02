@@ -21,6 +21,11 @@
       <div class="col-md-6 mb-4">
         <h2 class="h4 mb-3">Motions</h2>
 
+        <a href="{{ url_for('create_motion', meeting_id=meeting.id) }}" class="btn btn-sm btn-primary mb-3">
+          + Add Motion
+        </a>
+
+
         {% if meeting.motions %}
           <p class="text-muted">Total motions: {{ meeting.motions|length }}</p>
           <ul class="list-group">

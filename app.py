@@ -111,5 +111,43 @@ def meeting_detail(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
     return render_template("admin/meeting_detail.html", meeting=meeting)
 
+@app.route("/admin/meetings/<int:meeting_id>/motions/new", methods=["GET", "POST"])
+def create_motion(meeting_id):
+    meeting = Meeting.query.get_or_404(meeting_id)
+
+    if request.method == "POST":
+        title = request.form.get("title")
+        motion_type = request.form.get("type")
+        candidate_text = request.form.get("candidates")  # may be empty
+
+        # Create the motion
+        motion = Motion(
+            meeting_id=meeting.id,
+            title=title,
+            type=motion_type,
+            status="DRAFT",  # we can change to OPEN/CLOSED later
+        )
+        db.session.add(motion)
+        db.session.flush()  # get motion.id before creating options
+
+        # Create options based on motion type
+        if motion_type == "YES_NO":
+            default_options = ["Yes", "No", "Abstain"]
+            for opt in default_options:
+                db.session.add(Option(motion_id=motion.id, text=opt))
+        elif motion_type == "CANDIDATE":
+            # Split candidate text by lines (ignore empty lines)
+            if candidate_text:
+                lines = [line.strip() for line in candidate_text.splitlines() if line.strip()]
+                for name in lines:
+                    db.session.add(Option(motion_id=motion.id, text=name))
+
+        db.session.commit()
+
+        return redirect(url_for("meeting_detail", meeting_id=meeting.id))
+
+    # GET → show form
+    return render_template("admin/create_motion.html", meeting=meeting)
+
 if __name__ == "__main__":
     app.run(debug=True)
