@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% if invalid %}
+    <div class="py-5 text-center">
+      <h1 class="mb-3">Invalid voting link</h1>
+      <p class="text-muted">
+        This voting code is not recognised. Please check that you copied the link correctly,
+        or contact the meeting organiser.
+      </p>
+    </div>
+  {% else %}
+    <div class="py-4">
+      <h1 class="mb-1">Voting – {{ meeting.title }}</h1>
+      <p class="text-muted mb-4">
+        Voter: {{ voter.name }} &middot;
+        Code: <code>{{ voter.code }}</code>
+      </p>
+
+      {% if motions %}
+        <p class="mb-3">
+          Select a motion below to cast or review your vote. You will vote on one motion at a time.
+        </p>
+
+        <div class="list-group">
+          {% for motion in motions %}
+            {% set has_voted = motion.id in voted_motion_ids %}
+            <a
+              href="{{ url_for('vote_motion', code=voter.code, motion_id=motion.id) }}"
+              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <strong>{{ motion.title }}</strong><br>
+                <small class="text-muted">
+                  Type: {{ motion.type }} &middot; Status: {{ motion.status }}
+                  {% if motion.type == "PREFERENCE" and motion.num_winners %}
+                    &middot; Winners: {{ motion.num_winners }}
+                  {% endif %}
+                </small>
+              </div>
+              <span class="badge bg-{{ 'success' if has_voted else 'secondary' }}">
+                {{ 'Voted' if has_voted else 'Not yet voted' }}
+              </span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info">
+          There are no motions available to vote on yet. Please check back later or contact the organiser.
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

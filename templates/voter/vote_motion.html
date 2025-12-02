@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% if invalid %}
+    <div class="py-5 text-center">
+      <h1 class="mb-3">Invalid voting link</h1>
+      <p class="text-muted">
+        This voting code is not recognised. Please check that you copied the link correctly,
+        or contact the meeting organiser.
+      </p>
+    </div>
+  {% else %}
+    <div class="py-4">
+      <a href="{{ url_for('voter_dashboard', code=voter.code) }}" class="btn btn-link">
+        &larr; Back to all motions
+      </a>
+
+      <h1 class="mb-1">{{ motion.title }}</h1>
+      <p class="text-muted mb-3">
+        Meeting: {{ meeting.title }}<br>
+        Voter: {{ voter.name }} &middot; Code: <code>{{ voter.code }}</code><br>
+        Type: {{ motion.type }} &middot; Status: {{ motion.status }}
+        {% if motion.type == "PREFERENCE" and motion.num_winners %}
+          &middot; Winners: {{ motion.num_winners }}
+        {% endif %}
+      </p>
+
+      <form method="POST" action="{{ url_for('vote_motion', code=voter.code, motion_id=motion.id) }}">
+        {% if motion.type == "PREFERENCE" %}
+          <p class="fw-semibold mb-1">
+            Rank the candidates (1 = highest preference).
+            You can leave some blank if you don't want to rank them all.
+          </p>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th style="width: 120px;">Rank</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for opt in motion.options %}
+                  {% set existing_rank = preference_ranks.get(opt.id) if preference_ranks else '' %}
+                  <tr>
+                    <td>{{ opt.text }}</td>
+                    <td>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm"
+                        name="opt_{{ opt.id }}_rank"
+                        min="1"
+                        max="{{ motion.options|length }}"
+                        value="{{ existing_rank }}"
+                      >
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="fw-semibold mb-1">
+            {% if motion.type == "YES_NO" %}
+              Choose one option:
+            {% elif motion.type == "CANDIDATE" %}
+              Choose one candidate:
+            {% else %}
+              Choose one option:
+            {% endif %}
+          </p>
+
+          {% for opt in motion.options %}
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="option"
+                id="opt_{{ opt.id }}"
+                value="{{ opt.id }}"
+                {% if simple_vote and simple_vote.option_id == opt.id %}checked{% endif %}
+              >
+              <label class="form-check-label" for="opt_{{ opt.id }}">
+                {{ opt.text }}
+              </label>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary mt-3">
+          Save Vote for This Motion
+        </button>
+        <a href="{{ url_for('voter_dashboard', code=voter.code) }}" class="btn btn-secondary mt-3">
+          Cancel
+        </a>
+      </form>
+    </div>
+  {% endif %}
+{% endblock %}

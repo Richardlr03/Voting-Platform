@@ -296,119 +296,142 @@ def meeting_votes(meeting_id):
     )
 
 
-@app.route("/vote/<code>", methods=["GET", "POST"])
-def voter_page(code):
+@app.route("/vote/<code>")
+def voter_dashboard(code):
     voter = Voter.query.filter_by(code=code).first()
 
     if not voter:
-        # Invalid code: show error
         return render_template(
-            "voter/vote.html",
+            "voter/motion_list.html",
             invalid=True,
             voter=None,
             meeting=None,
             motions=None,
-            votes_by_motion=None,
-            preference_ranks_by_motion=None,
+            voted_motion_ids=set(),
         )
 
     meeting = voter.meeting
     motions = meeting.motions
 
-    # For non-preference motions, we still want a simple "one vote per motion" mapping
-    simple_votes_by_motion = {
-        vote.motion_id: vote
-        for vote in voter.votes
-        if vote.preference_rank is None
-    }
-
-    preference_ranks_by_motion = {}
+    # Figure out which motions this voter has already cast any vote for
+    voted_motion_ids = set()
     for vote in voter.votes:
-        if vote.preference_rank is not None:
-            motion_map = preference_ranks_by_motion.setdefault(vote.motion_id, {})
-            motion_map[vote.option_id] = vote.preference_rank
+        voted_motion_ids.add(vote.motion_id)
 
-    if request.method == "POST":
-        for motion in motions:
-            # Preference voting: ranked ballot
-            if motion.type == "PREFERENCE":
-                # Delete existing preference votes for this voter & motion
-                existing_pref_votes = Vote.query.filter(
-                    and_(
-                        Vote.voter_id == voter.id,
-                        Vote.motion_id == motion.id,
-                        Vote.preference_rank.isnot(None),
-                    )
-                ).all()
-                for ev in existing_pref_votes:
-                    db.session.delete(ev)
-
-                # Read all rank inputs for this motion
-                ranks = []  # list of (rank, option_id)
-                for opt in motion.options:
-                    field_name = f"motion_{motion.id}_opt_{opt.id}_rank"
-                    value = request.form.get(field_name)
-
-                    if not value:
-                        continue
-
-                    try:
-                        rank = int(value)
-                    except ValueError:
-                        continue
-
-                    if rank <= 0:
-                        continue
-
-                    ranks.append((rank, opt.id))
-
-                # Save new preference votes (one row per ranked option)
-                for rank, opt_id in ranks:
-                    db.session.add(Vote(
-                        voter_id=voter.id,
-                        motion_id=motion.id,
-                        option_id=opt_id,
-                        preference_rank=rank,
-                    ))
-
-            else:
-                # Existing behaviour: YES_NO or CANDIDATE (single choice)
-                field_name = f"motion_{motion.id}"
-                selected_option_id = request.form.get(field_name)
-
-                if not selected_option_id:
-                    continue
-
-                try:
-                    option_id_int = int(selected_option_id)
-                except ValueError:
-                    continue
-
-                existing_vote = simple_votes_by_motion.get(motion.id)
-
-                if existing_vote:
-                    existing_vote.option_id = option_id_int
-                else:
-                    db.session.add(Vote(
-                        voter_id=voter.id,
-                        motion_id=motion.id,
-                        option_id=option_id_int,
-                        preference_rank=None,
-                    ))
-
-        db.session.commit()
-        flash("Your votes have been recorded (including any preferences).", "success")
-        return redirect(url_for("voter_page", code=voter.code))
-
-    # GET – we only pre-fill non-preference votes for now
     return render_template(
-        "voter/vote.html",
+        "voter/motion_list.html",
         invalid=False,
         voter=voter,
         meeting=meeting,
         motions=motions,
-        votes_by_motion=simple_votes_by_motion,
-        preference_ranks_by_motion=preference_ranks_by_motion,
+        voted_motion_ids=voted_motion_ids,
+    )
+
+@app.route("/vote/<code>/motion/<int:motion_id>", methods=["GET", "POST"])
+def vote_motion(code, motion_id):
+    voter = Voter.query.filter_by(code=code).first()
+
+    if not voter:
+        # Reuse the same template with invalid flag
+        return render_template(
+            "voter/vote_motion.html",
+            invalid=True,
+            voter=None,
+            meeting=None,
+            motion=None,
+            simple_vote=None,
+            preference_ranks=None,
+        )
+
+    meeting = voter.meeting
+
+    # Make sure the motion belongs to this meeting
+    motion = Motion.query.filter_by(id=motion_id, meeting_id=meeting.id).first_or_404()
+
+    # Load existing votes for this motion & voter
+    simple_vote = None
+    preference_ranks = {}
+
+    votes_for_motion = [v for v in voter.votes if v.motion_id == motion.id]
+
+    for v in votes_for_motion:
+        if v.preference_rank is None:
+            simple_vote = v
+        else:
+            preference_ranks[v.option_id] = v.preference_rank
+
+    if request.method == "POST":
+        if motion.type == "PREFERENCE":
+            # Delete old preference votes for this motion & voter
+            existing_pref_votes = Vote.query.filter(
+                and_(
+                    Vote.voter_id == voter.id,
+                    Vote.motion_id == motion.id,
+                    Vote.preference_rank.isnot(None),
+                )
+            ).all()
+            for ev in existing_pref_votes:
+                db.session.delete(ev)
+
+            # Collect new ranks
+            ranks = []
+            for opt in motion.options:
+                field_name = f"opt_{opt.id}_rank"
+                value = request.form.get(field_name)
+                if not value:
+                    continue
+                try:
+                    rank = int(value)
+                except ValueError:
+                    continue
+                if rank <= 0:
+                    continue
+                ranks.append((rank, opt.id))
+
+            # Save new preference votes
+            for rank, opt_id in ranks:
+                db.session.add(Vote(
+                    voter_id=voter.id,
+                    motion_id=motion.id,
+                    option_id=opt_id,
+                    preference_rank=rank,
+                ))
+
+        else:
+            # YES_NO / CANDIDATE: single choice
+            selected_option_id = request.form.get("option")
+            if selected_option_id:
+                try:
+                    option_id_int = int(selected_option_id)
+                except ValueError:
+                    option_id_int = None
+
+                if option_id_int is not None:
+                    if simple_vote:
+                        simple_vote.option_id = option_id_int
+                        simple_vote.preference_rank = None
+                    else:
+                        db.session.add(Vote(
+                            voter_id=voter.id,
+                            motion_id=motion.id,
+                            option_id=option_id_int,
+                            preference_rank=None,
+                        ))
+
+        db.session.commit()
+        flash("Your vote for this motion has been recorded.", "success")
+        # After voting, send them back to the motion list
+        return redirect(url_for("voter_dashboard", code=voter.code))
+
+    # GET: show form with any existing choices prefilled
+    return render_template(
+        "voter/vote_motion.html",
+        invalid=False,
+        voter=voter,
+        meeting=meeting,
+        motion=motion,
+        simple_vote=simple_vote,
+        preference_ranks=preference_ranks,
     )
 
 if __name__ == "__main__":
