@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 import os
@@ -177,31 +177,69 @@ def create_voter(meeting_id):
     # GET -> show form
     return render_template("admin/create_voter.html", meeting=meeting)
 
-@app.route("/vote/<code>")
+@app.route("/vote/<code>", methods=["GET", "POST"])
 def voter_page(code):
-    # Look up voter by their unique code
     voter = Voter.query.filter_by(code=code).first()
 
     if not voter:
-        # Invalid code: show a friendly error page
+        # Invalid code: show error
         return render_template(
             "voter/vote.html",
             invalid=True,
             voter=None,
             meeting=None,
             motions=None,
+            votes_by_motion=None,
         )
 
-    meeting = voter.meeting  # thanks to relationship backref
-    # For now, show all motions; later we might filter by status == "OPEN"
+    meeting = voter.meeting
     motions = meeting.motions
 
+    # Map existing votes for this voter, keyed by motion_id
+    votes_by_motion = {vote.motion_id: vote for vote in voter.votes}
+
+    if request.method == "POST":
+        # Process submitted choices
+        for motion in motions:
+            field_name = f"motion_{motion.id}"
+            selected_option_id = request.form.get(field_name)
+
+            if not selected_option_id:
+                # Voter left this motion blank
+                continue
+
+            try:
+                option_id_int = int(selected_option_id)
+            except ValueError:
+                continue
+
+            existing_vote = votes_by_motion.get(motion.id)
+
+            if existing_vote:
+                # Update existing vote for this motion
+                existing_vote.option_id = option_id_int
+            else:
+                # Create a new vote
+                new_vote = Vote(
+                    voter_id=voter.id,
+                    motion_id=motion.id,
+                    option_id=option_id_int,
+                )
+                db.session.add(new_vote)
+
+        db.session.commit()
+        flash("Your votes have been recorded. You can revisit this link to review or change them while voting is open.", "success")
+
+        return redirect(url_for("voter_page", code=voter.code))
+
+    # GET → show page with existing selections (if any)
     return render_template(
         "voter/vote.html",
         invalid=False,
         voter=voter,
         meeting=meeting,
         motions=motions,
+        votes_by_motion=votes_by_motion,
     )
 
 if __name__ == "__main__":

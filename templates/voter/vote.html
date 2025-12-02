@@ -22,56 +22,58 @@
         <hr class="my-4">
       {% endif %}
 
-      {% if motions %}
+            {% if motions %}
         <p class="mb-3">
-          Below are the motions currently configured for this meeting.
-          In the next step, we’ll enable submitting your selections.
+          Below are the motions available for this meeting.
+          Please select one option for each motion you wish to vote on, then submit your votes.
         </p>
 
-        <div class="list-group">
-          {% for motion in motions %}
-            <div class="list-group-item mb-3">
-              <h2 class="h5 mb-1">{{ motion.title }}</h2>
-              <p class="text-muted mb-2">
-                Type: {{ motion.type }} &middot; Status: {{ motion.status }}
-              </p>
+        <form method="POST" action="{{ url_for('voter_page', code=voter.code) }}">
+          <div class="list-group">
+            {% for motion in motions %}
+              <div class="list-group-item mb-3">
+                <h2 class="h5 mb-1">{{ motion.title }}</h2>
+                <p class="text-muted mb-2">
+                  Type: {{ motion.type }} &middot; Status: {{ motion.status }}
+                </p>
 
-              {% if motion.options %}
-                <div class="ms-2">
-                  {% if motion.type == "YES_NO" %}
-                    <p class="fw-semibold mb-1">Choose one option:</p>
-                  {% elif motion.type == "CANDIDATE" %}
-                    <p class="fw-semibold mb-1">Choose one candidate:</p>
-                  {% endif %}
+                {% if motion.options %}
+                  <div class="ms-2">
+                    {% if motion.type == "YES_NO" %}
+                      <p class="fw-semibold mb-1">Choose one option:</p>
+                    {% elif motion.type == "CANDIDATE" %}
+                      <p class="fw-semibold mb-1">Choose one candidate:</p>
+                    {% endif %}
 
-                  <!-- For now, these radio inputs are just for display.
-                       In Step 9 we'll wrap them in a form and store votes. -->
-                  {% for opt in motion.options %}
-                    <div class="form-check">
-                      <input
-                        class="form-check-input"
-                        type="radio"
-                        name="motion_{{ motion.id }}"
-                        id="motion_{{ motion.id }}_opt_{{ opt.id }}"
-                        disabled
-                      >
-                      <label class="form-check-label" for="motion_{{ motion.id }}_opt_{{ opt.id }}">
-                        {{ opt.text }}
-                      </label>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% else %}
-                <p class="text-muted"><em>No options defined for this motion yet.</em></p>
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
+                    {% set existing_vote = votes_by_motion.get(motion.id) if votes_by_motion else None %}
 
-        <div class="alert alert-info mt-4">
-          Voting submission is not enabled yet. In the next step, we’ll allow you to select options
-          and submit your votes.
-        </div>
+                    {% for opt in motion.options %}
+                      <div class="form-check">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          name="motion_{{ motion.id }}"
+                          id="motion_{{ motion.id }}_opt_{{ opt.id }}"
+                          value="{{ opt.id }}"
+                          {% if existing_vote and existing_vote.option_id == opt.id %}checked{% endif %}
+                        >
+                        <label class="form-check-label" for="motion_{{ motion.id }}_opt_{{ opt.id }}">
+                          {{ opt.text }}
+                        </label>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-muted"><em>No options defined for this motion yet.</em></p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+
+          <button type="submit" class="btn btn-primary mt-3">
+            Submit Votes
+          </button>
+        </form>
       {% else %}
         <div class="alert alert-info">
           There are no motions available to vote on yet. Please check back later or contact the organiser.
