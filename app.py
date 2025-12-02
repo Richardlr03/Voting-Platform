@@ -309,6 +309,7 @@ def voter_page(code):
             meeting=None,
             motions=None,
             votes_by_motion=None,
+            preference_ranks_by_motion=None,
         )
 
     meeting = voter.meeting
@@ -320,6 +321,12 @@ def voter_page(code):
         for vote in voter.votes
         if vote.preference_rank is None
     }
+
+    preference_ranks_by_motion = {}
+    for vote in voter.votes:
+        if vote.preference_rank is not None:
+            motion_map = preference_ranks_by_motion.setdefault(vote.motion_id, {})
+            motion_map[vote.option_id] = vote.preference_rank
 
     if request.method == "POST":
         for motion in motions:
@@ -401,6 +408,7 @@ def voter_page(code):
         meeting=meeting,
         motions=motions,
         votes_by_motion=simple_votes_by_motion,
+        preference_ranks_by_motion=preference_ranks_by_motion,
     )
 
 if __name__ == "__main__":

@@ -43,37 +43,41 @@
                 {% if motion.options %}
                   {% if motion.type == "PREFERENCE" %}
                     <div class="ms-2">
-                      <p class="fw-semibold mb-1">
+                        <p class="fw-semibold mb-1">
                         Rank the candidates (1 = highest preference).
                         You can leave some blank if you don't want to rank them all.
-                      </p>
+                        </p>
 
-                      <div class="table-responsive">
+                        {% set ranks_for_motion = preference_ranks_by_motion.get(motion.id) if preference_ranks_by_motion else None %}
+
+                        <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0">
-                          <thead>
+                            <thead>
                             <tr>
-                              <th>Candidate</th>
-                              <th style="width: 120px;">Rank</th>
+                                <th>Candidate</th>
+                                <th style="width: 120px;">Rank</th>
                             </tr>
-                          </thead>
-                          <tbody>
+                            </thead>
+                            <tbody>
                             {% for opt in motion.options %}
-                              <tr>
+                                {% set existing_rank = ranks_for_motion.get(opt.id) if ranks_for_motion else '' %}
+                                <tr>
                                 <td>{{ opt.text }}</td>
                                 <td>
-                                  <input
+                                    <input
                                     type="number"
                                     class="form-control form-control-sm"
                                     name="motion_{{ motion.id }}_opt_{{ opt.id }}_rank"
                                     min="1"
                                     max="{{ motion.options|length }}"
-                                  >
+                                    value="{{ existing_rank }}"
+                                    >
                                 </td>
-                              </tr>
+                                </tr>
                             {% endfor %}
-                          </tbody>
+                            </tbody>
                         </table>
-                      </div>
+                        </div>
                     </div>
                   {% else %}
                     {# YES_NO and CANDIDATE – single choice #}
