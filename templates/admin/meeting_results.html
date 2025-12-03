@@ -18,40 +18,60 @@
           <div class="card-body">
             <h2 class="h5 card-title mb-1">{{ motion.title }}</h2>
             <p class="text-muted mb-3">
-              Type: {{ motion.type }} &middot; Status: {{ motion.status }}<br>
-              Total votes: {{ item.total_votes }}
-              {% if motion.type == "PREFERENCE" and motion.num_winners %}
-                  <br>Number of winners: {{ motion.num_winners }}
-              {% endif %}
+              Type: {{ motion.type }} &middot; Status: {{ motion.status }}
             </p>
 
-            {% if item.total_votes == 0 %}
-              <div class="alert alert-info mb-0">
-                No votes have been cast for this motion yet.
-              </div>
-            {% else %}
-              <table class="table table-sm align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Option</th>
-                    <th style="width: 20%;">Votes</th>
-                    <th style="width: 20%;">Percent</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for res in item.option_results %}
-                    <tr>
-                      <td>{{ res.option.text }}</td>
-                      <td>{{ res.count }}</td>
-                      <td>{{ "%.1f"|format(res.percent) }}%</td>
-                    </tr>
+            {% if item.is_preference %}
+              {% set pref = item.pref %}
+              <p class="mb-2">
+                Preference ballots: {{ pref.total_ballots }}<br>
+                Number of winners: {{ pref.num_winners }}<br>
+                Winners (in order):
+                {% if pref.winners %}
+                  {% for w in pref.winners %}
+                    <span class="badge bg-success">{{ w.text }}</span>
                   {% endfor %}
-                </tbody>
-              </table>
+                {% else %}
+                  <span class="text-muted">No winners determined.</span>
+                {% endif %}
+              </p>
+
+              {% for seat in pref.seats %}
+                <h3 class="h6 mt-3 mb-2">Seat {{ seat.seat_number }} – Winner: {{ seat.winner.text }}</h3>
+                <table class="table table-sm align-middle mb-3">
+                  <thead>
+                    <tr>
+                      <th>Round</th>
+                      <th>Candidate</th>
+                      <th>Votes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for round in seat.rounds %}
+                      {% for row in round.counts %}
+                        <tr>
+                          <td>{{ round.round_number }}</td>
+                          <td>
+                            {{ row.option.text }}
+                            {% if row.option.id == seat.winner.id %}
+                              <span class="badge bg-success ms-1">Elected</span>
+                            {% endif %}
+                          </td>
+                          <td>{{ row.count }}</td>
+                        </tr>
+                      {% endfor %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% endfor %}
+
+            {% else %}
+              {# existing simple results table here #}
             {% endif %}
           </div>
         </div>
       {% endfor %}
+
     {% else %}
       <div class="alert alert-info">
         There are no motions configured for this meeting yet.

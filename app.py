@@ -85,9 +85,256 @@ class Vote(db.Model):
     # For normal motions, this stays NULL.
     preference_rank = db.Column(db.Integer, nullable=True)
 
+# --- Helper Functions ---
+
 def generate_voter_code():
     # 8-character uppercase code, e.g. 'A1B2C3D4'
     return uuid.uuid4().hex[:8].upper()
+
+def build_ballots_for_motion(motion):
+    """
+    Turn motion.votes into a list of ballots.
+    Each ballot is a list of option_ids in rank order: [first, second, third, ...]
+    Only uses votes with preference_rank not NULL.
+    """
+    # Group preference votes by voter
+    votes_by_voter = {}
+    for vote in motion.votes:
+        if vote.preference_rank is not None:
+            votes_by_voter.setdefault(vote.voter_id, []).append(vote)
+
+    ballots = []
+    for voter_id, votes in votes_by_voter.items():
+        # sort by rank: 1,2,3,...
+        sorted_votes = sorted(votes, key=lambda v: v.preference_rank)
+        ballot = [v.option_id for v in sorted_votes]
+        if ballot:
+            ballots.append(ballot)
+
+    return ballots
+
+def irv_single_winner(ballots, active_candidates):
+    active = set(active_candidates)
+    rounds = []
+
+    while active:
+        if len(active) == 1:
+            (only,) = active
+            return only, rounds
+
+        counts = {cid: 0 for cid in active}
+        for ballot in ballots:
+            for opt_id in ballot:
+                if opt_id in active:
+                    counts[opt_id] += 1
+                    break
+
+        rounds.append(counts.copy())
+
+        total_valid = sum(counts.values())
+        if total_valid == 0:
+            return None, rounds
+
+        winner_id = max(counts, key=counts.get)
+        if counts[winner_id] > total_valid / 2:
+            return winner_id, rounds
+
+        min_votes = min(counts.values())
+        lowest = [cid for cid, v in counts.items() if v == min_votes]
+
+        if len(lowest) == 1:
+            loser = lowest[0]
+        else:
+            tie_loser = irv_tie_break_loser(ballots, lowest)
+            if tie_loser is None:
+                tie_loser = min(lowest)  # final emergency fallback
+            loser = tie_loser
+
+        active.remove(loser)
+
+    return None, rounds
+
+def irv_tie_break_loser(ballots, tied_candidates):
+    """
+    Break a tie between candidates in tied_candidates using deeper preferences.
+
+    Stage 1: relative to the tied set only
+      - Filter each ballot to only tied candidates.
+      - For rank level 1..max_depth in that filtered ranking:
+          * Count how often each tied candidate appears at that level.
+          * Find the candidates with the FEWEST appearances (weakest).
+          * If that subset is:
+              - size 1  -> eliminate that candidate
+              - size >1 -> restrict tie to this subset and restart from level 1
+
+    Stage 2 (fallback): use original full rankings
+      - Do a similar process, but now counting appearances at absolute positions
+        in the original ballots (no filtering), still only for tied candidates.
+
+    If still tied after both stages, return None so caller can fall back
+    to a final deterministic rule (e.g. lowest ID).
+    """
+    if not ballots:
+        return None
+
+    tied = set(tied_candidates)
+    if len(tied) <= 1:
+        return next(iter(tied)) if tied else None
+
+    # -------- Stage 1: relative to tied set only --------
+    while len(tied) > 1:
+        filtered_ballots = []
+        max_depth = 0
+        for ballot in ballots:
+            fb = [cid for cid in ballot if cid in tied]
+            if fb:
+                filtered_ballots.append(fb)
+                if len(fb) > max_depth:
+                    max_depth = len(fb)
+
+        if not filtered_ballots or max_depth == 0:
+            break
+
+        reduced = False
+
+        for level in range(1, max_depth + 1):
+            counts = {cid: 0 for cid in tied}
+            for fb in filtered_ballots:
+                if len(fb) >= level:
+                    cand_at_level = fb[level - 1]
+                    counts[cand_at_level] += 1
+
+            min_count = min(counts.values())
+            lowest = [cid for cid, v in counts.items() if v == min_count]
+
+            if len(lowest) < len(tied):
+                if len(lowest) == 1:
+                    return lowest[0]  # unique loser
+                else:
+                    tied = set(lowest)  # narrower tied set, restart from level 1
+                    reduced = True
+                    break
+
+        if not reduced:
+            break  # cannot narrow further in stage 1
+
+    if len(tied) == 1:
+        return next(iter(tied))
+
+    # -------- Stage 2: fallback using original rankings --------
+    # Now use absolute positions in original ballots, only counting tied candidates.
+    all_max_depth = max((len(b) for b in ballots), default=0)
+
+    while len(tied) > 1 and all_max_depth > 0:
+        reduced = False
+
+        for level in range(1, all_max_depth + 1):
+            counts = {cid: 0 for cid in tied}
+            for ballot in ballots:
+                if len(ballot) >= level:
+                    cand_at_level = ballot[level - 1]
+                    if cand_at_level in tied:
+                        counts[cand_at_level] += 1
+
+            # If everyone has 0 at this level, nothing to learn; go to next level
+            if all(v == 0 for v in counts.values()):
+                continue
+
+            min_count = min(counts.values())
+            lowest = [cid for cid, v in counts.items() if v == min_count]
+
+            if len(lowest) < len(tied):
+                if len(lowest) == 1:
+                    return lowest[0]  # unique loser in fallback stage
+                else:
+                    tied = set(lowest)
+                    reduced = True
+                    break  # restart from level 1 with smaller tied set
+
+        if not reduced:
+            break
+
+    if len(tied) == 1:
+        return next(iter(tied))
+
+    # Still completely tied after both stages
+    return None
+
+def tally_preference_sequential_irv(motion):
+    """
+    Multi-winner sequential IRV for a PREFERENCE motion.
+
+    - For seat 1: run IRV among all candidates.
+    - For seat 2: run IRV again with the same ballots, but excluding already-elected winners.
+    - Repeat until motion.num_winners winners are chosen or no more candidates.
+
+    Returns a dict with:
+      - winners: list of Option objects in election order
+      - seats: list of per-seat info:
+          {
+            "seat_number": 1-based,
+            "winner": Option,
+            "rounds": [
+              {
+                "round_number": int,
+                "counts": [ {"option": Option, "count": int}, ... ],
+                "total": int,
+              },
+              ...
+            ],
+          }
+      - num_winners: requested number of winners
+      - total_ballots: number of preference ballots used
+    """
+    ballots = build_ballots_for_motion(motion)
+    options_by_id = {opt.id: opt for opt in motion.options}
+    all_candidate_ids = set(options_by_id.keys())
+
+    num_seats = motion.num_winners or 1
+    winners_ids = []
+    seats_info = []
+
+    for seat_index in range(num_seats):
+        active_candidates = all_candidate_ids - set(winners_ids)
+        if not active_candidates:
+            break
+
+        winner_id, rounds_raw = irv_single_winner(ballots, active_candidates)
+        if winner_id is None:
+            break
+
+        winners_ids.append(winner_id)
+
+        # Convert rounds into nicer structure for templates
+        rounds_info = []
+        for i, counts in enumerate(rounds_raw):
+            total = sum(counts.values())
+            counts_list = []
+            for cid, cnt in sorted(counts.items()):
+                counts_list.append({
+                    "option": options_by_id[cid],
+                    "count": cnt,
+                })
+            rounds_info.append({
+                "round_number": i + 1,
+                "counts": counts_list,
+                "total": total,
+            })
+
+        seats_info.append({
+            "seat_number": seat_index + 1,
+            "winner": options_by_id[winner_id],
+            "rounds": rounds_info,
+        })
+
+    winners = [options_by_id[cid] for cid in winners_ids]
+
+    return {
+        "winners": winners,
+        "seats": seats_info,
+        "num_winners": num_seats,
+        "total_ballots": len(ballots),
+    }
 
 # --- Routes ---
 
@@ -202,31 +449,41 @@ def meeting_results(meeting_id):
     results = []
 
     for motion in meeting.motions:
-        # Initialize counts per option
-        option_counts = {opt.id: 0 for opt in motion.options}
-
-        # Count votes
-        for vote in motion.votes:
-            if vote.option_id in option_counts:
-                option_counts[vote.option_id] += 1
-
-        total_votes = sum(option_counts.values())
-
-        option_results = []
-        for opt in motion.options:
-            count = option_counts[opt.id]
-            percent = (count / total_votes * 100) if total_votes > 0 else 0
-            option_results.append({
-                "option": opt,
-                "count": count,
-                "percent": percent,
+        if motion.type == "PREFERENCE":
+            pref_result = tally_preference_sequential_irv(motion)
+            results.append({
+                "motion": motion,
+                "is_preference": True,
+                "pref": pref_result,
             })
+        else:
+            # existing simple tally for YES_NO / CANDIDATE etc.
+            option_counts = {opt.id: 0 for opt in motion.options}
+            for vote in motion.votes:
+                if vote.preference_rank is None:
+                    if vote.option_id in option_counts:
+                        option_counts[vote.option_id] += 1
 
-        results.append({
-            "motion": motion,
-            "total_votes": total_votes,
-            "option_results": option_results,
-        })
+            total_votes = sum(option_counts.values())
+
+            option_results = []
+            for opt in motion.options:
+                count = option_counts.get(opt.id, 0)
+                percent = (count / total_votes * 100) if total_votes > 0 else 0
+                option_results.append({
+                    "option": opt,
+                    "count": count,
+                    "percent": percent,
+                })
+
+            results.append({
+                "motion": motion,
+                "is_preference": False,
+                "simple": {
+                    "total_votes": total_votes,
+                    "option_results": option_results,
+                }
+            })
 
     return render_template(
         "admin/meeting_results.html",
