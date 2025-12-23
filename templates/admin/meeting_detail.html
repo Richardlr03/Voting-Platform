@@ -1,89 +1,433 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="py-4">
-    <a href="{{ url_for('admin_meetings') }}" class="btn btn-link">&larr; Back to all meetings</a>
+  <div class="py-2">
 
-    <h1 class="mb-1">{{ meeting.title }}</h1>
-    <p class="text-muted mb-3">
-      Meeting ID: {{ meeting.id }}
-    </p>
+    <!-- Top bar -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <a href="{{ url_for('admin_meetings') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
 
-    {% if meeting.description %}
-      <p>{{ meeting.description }}</p>
-    {% else %}
-      <p class="text-muted"><em>No description provided.</em></p>
-    {% endif %}
-
-    <a href="{{ url_for('meeting_results', meeting_id=meeting.id) }}" class="btn btn-outline-primary mb-4">
-      View Results
-    </a>
-
-    <a href="{{ url_for('meeting_votes', meeting_id=meeting.id) }}" class="btn btn-outline-secondary mb-4 ms-2">
-      View Detailed Votes
-    </a>
-
-    <hr class="my-4">
-
-    <div class="row">
-      <div class="col-md-6 mb-4">
-        <h2 class="h4 mb-3">Motions</h2>
-
-        <a href="{{ url_for('create_motion', meeting_id=meeting.id) }}" class="btn btn-sm btn-primary mb-3">
-          + Add Motion
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('meeting_votes', meeting_id=meeting.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-list-check me-1"></i> Detailed Votes
         </a>
-
-
-        {% if meeting.motions %}
-          <p class="text-muted">Total motions: {{ meeting.motions|length }}</p>
-          <ul class="list-group">
-            {% for motion in meeting.motions %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                  <strong>{{ motion.title }}</strong><br>
-                  <small class="text-muted">
-                    Type: {{ motion.type }} | Status: {{ motion.status }}
-                    {% if motion.type == "PREFERENCE" and motion.num_winners %}
-                        | Winners: {{ motion.num_winners }}
-                    {% endif %}
-                  </small>
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <div class="alert alert-info">
-            No motions added yet. We’ll add a form to create motions here in the next step.
-          </div>
-        {% endif %}
+        <a href="{{ url_for('meeting_results', meeting_id=meeting.id) }}" class="btn btn-sm btn-primary">
+          <i class="bi bi-bar-chart me-1"></i> View Results
+        </a>
       </div>
+    </div>
 
-      <div class="col-md-6 mb-4">
-        <h2 class="h4 mb-3">Voters</h2>
-
-        <a href="{{ url_for('create_voter', meeting_id=meeting.id) }}" class="btn btn-sm btn-primary mb-3">
-          + Add Voter
-        </a>
-
-
-        {% if meeting.voters %}
-          <p class="text-muted">Total voters: {{ meeting.voters|length }}</p>
-          <ul class="list-group">
-            {% for voter in meeting.voters %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                  {{ voter.name }}<br>
-                  <small class="text-muted">Code: {{ voter.code }}</small>
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <div class="alert alert-info">
-            No voters added yet. We'll add tools to manage voter list here soon.
+    <!-- Header card -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-3 p-md-4">
+        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+          <div>
+            <h1 class="h4 mb-1">{{ meeting.title }}</h1>
           </div>
+
+          <div class="text-muted small">
+            <i class="bi bi-shield-lock me-1"></i>
+            Admin view
+          </div>
+        </div>
+
+        <hr class="my-3">
+
+        {% if meeting.description %}
+          <p class="mb-0">{{ meeting.description }}</p>
+        {% else %}
+          <p class="text-muted mb-0"><em>No description provided.</em></p>
         {% endif %}
       </div>
     </div>
+
+    <!-- Two columns -->
+    <div class="row g-4">
+
+      <!-- Motions -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-white border-0 pt-3 pb-0 px-3 px-md-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h2 class="h5 mb-0">Motions</h2>
+                <div class="text-muted small">
+                  {% if meeting.motions %}Total: {{ meeting.motions|length }}{% else %}No motions yet{% endif %}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addMotionModal"
+              >
+                <i class="bi bi-plus-lg me-1"></i> Add Motion
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body p-3 p-md-4">
+            {% if meeting.motions %}
+              <div class="list-group list-group-flush">
+                {% for motion in meeting.motions %}
+                  <div class="list-group-item px-0 py-3">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                      <div class="pe-2">
+                        <div class="fw-semibold mb-1">{{ motion.title }}</div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                          <span class="badge text-bg-light border">
+                            <i class="bi bi-tag me-1"></i>{{ motion.type }}
+                          </span>
+
+                          {% set status_cls =
+                            'success' if motion.status in ['OPEN', 'APPROVED', 'PASSED']
+                            else 'secondary' if motion.status in ['DRAFT', 'PENDING']
+                            else 'danger' if motion.status in ['REJECTED', 'FAILED', 'CLOSED']
+                            else 'info'
+                          %}
+                          <span class="badge text-bg-{{ status_cls }}">
+                            {{ motion.status }}
+                          </span>
+
+                          {% if motion.type == "PREFERENCE" and motion.num_winners %}
+                            <span class="badge text-bg-light border">
+                              <i class="bi bi-trophy me-1"></i>Winners: {{ motion.num_winners }}
+                            </span>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <div class="text-muted small text-end">
+                        <i class="bi bi-chevron-right"></i>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-4">
+                <div class="mb-2 text-muted">
+                  <i class="bi bi-file-earmark-plus" style="font-size: 2rem;"></i>
+                </div>
+                <h3 class="h6 mb-1">No motions added</h3>
+                <p class="text-muted mb-3">Add a motion to start collecting votes.</p>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#addMotionModal"
+                >
+                  <i class="bi bi-plus-lg me-1"></i> Add Motion
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Voters -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-white border-0 pt-3 pb-0 px-3 px-md-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h2 class="h5 mb-0">Voters</h2>
+                <div class="text-muted small">
+                  {% if meeting.voters %}Total: {{ meeting.voters|length }}{% else %}No voters yet{% endif %}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addVoterModal"
+              >
+                <i class="bi bi-plus-lg me-1"></i> Add Voter
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body p-3 p-md-4">
+            {% if meeting.voters %}
+              <div class="list-group list-group-flush">
+                {% for voter in meeting.voters %}
+                  <div class="list-group-item px-0 py-3">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                      <div>
+                        <div class="fw-semibold">{{ voter.name }}</div>
+                        <div class="text-muted small">
+                          Code:
+                          <span class="font-monospace">{{ voter.code }}</span>
+                        </div>
+                      </div>
+
+                      <span class="badge text-bg-light border">
+                        <i class="bi bi-person-check me-1"></i> Voter
+                      </span>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-4">
+                <div class="mb-2 text-muted">
+                  <i class="bi bi-people" style="font-size: 2rem;"></i>
+                </div>
+                <h3 class="h6 mb-1">No voters added</h3>
+                <p class="text-muted mb-3">Add voters so they can receive access codes.</p>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#addVoterModal"
+                >
+                  <i class="bi bi-plus-lg me-1"></i> Add Voter
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Add Motion Modal -->
+  <div class="modal fade" id="addMotionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-light border-0">
+          <h5 class="modal-title"><i class="bi bi-plus-square me-2"></i>Add Motion</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form
+          id="addMotionForm"
+          method="POST"
+          action="{{ url_for('create_motion', meeting_id=meeting.id) }}"
+          data-action="{{ url_for('create_motion', meeting_id=meeting.id) }}"
+        >
+          <div class="modal-body p-3 p-md-4">
+            <div class="alert alert-danger d-none" id="addMotionError" role="alert"></div>
+
+            <div class="mb-3">
+              <label for="motionTitle" class="form-label">Motion Title</label>
+              <input type="text" class="form-control" id="motionTitle" name="title" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="motionType" class="form-label">Motion Type</label>
+              <select class="form-select" id="motionType" name="type" required>
+                <option value="YES_NO">Yes / No / Abstain</option>
+                <option value="CANDIDATE">Candidate election (choose 1)</option>
+                <option value="PREFERENCE">Preference voting (ranked, multiple winners)</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="motionCandidates" class="form-label">
+                Candidates (one per line) <span class="text-muted small">(Candidate/Preference)</span>
+              </label>
+              <textarea
+                class="form-control"
+                id="motionCandidates"
+                name="candidates"
+                rows="4"
+                placeholder="Alice&#10;Bob&#10;Charlie"
+              ></textarea>
+            </div>
+
+            <div class="mb-3" id="numWinnersGroup">
+              <label for="motionNumWinners" class="form-label">
+                Number of winners <span class="text-muted small">(Preference)</span>
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                id="motionNumWinners"
+                name="num_winners"
+                min="1"
+                placeholder="e.g. 1 or 2"
+              >
+            </div>
+          </div>
+
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="addMotionSubmit">Add Motion</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Voter Modal -->
+  <div class="modal fade" id="addVoterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-light border-0">
+          <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Add Voter</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form
+          id="addVoterForm"
+          method="POST"
+          action="{{ url_for('create_voter', meeting_id=meeting.id) }}"
+          data-action="{{ url_for('create_voter', meeting_id=meeting.id) }}"
+        >
+          <div class="modal-body p-3 p-md-4">
+            <div class="alert alert-danger d-none" id="addVoterError" role="alert"></div>
+
+            <div class="mb-3">
+              <label for="voterName" class="form-label">Voter Name</label>
+              <input type="text" class="form-control" id="voterName" name="name" required>
+            </div>
+
+            <p class="text-muted mb-0">
+              A unique access code will be generated automatically for this voter.
+            </p>
+          </div>
+
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="addVoterSubmit">Add Voter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keep your existing JS exactly (unchanged) -->
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      // Motion modal handling
+      const motionModalEl = document.getElementById("addMotionModal");
+      const motionForm = document.getElementById("addMotionForm");
+      const motionSubmit = document.getElementById("addMotionSubmit");
+      const motionError = document.getElementById("addMotionError");
+      const motionModal = new bootstrap.Modal(motionModalEl);
+      const motionType = document.getElementById("motionType");
+      const motionCandidates = document.getElementById("motionCandidates");
+      const numWinnersGroup = document.getElementById("numWinnersGroup");
+      const numWinnersInput = document.getElementById("motionNumWinners");
+
+      function setMotionLoading(isLoading) {
+        motionSubmit.disabled = isLoading;
+        motionSubmit.innerHTML = isLoading
+          ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...'
+          : "Add Motion";
+      }
+
+      function updateMotionVisibility() {
+        const t = motionType.value;
+        const needsCandidates = t === "CANDIDATE" || t === "PREFERENCE";
+        motionCandidates.disabled = !needsCandidates;
+        motionCandidates.classList.toggle("bg-light", !needsCandidates);
+
+        const needsNumWinners = t === "PREFERENCE";
+        numWinnersGroup.style.display = needsNumWinners ? "block" : "none";
+        if (!needsNumWinners) {
+          numWinnersInput.value = "";
+        }
+      }
+
+      motionType.addEventListener("change", updateMotionVisibility);
+      updateMotionVisibility();
+
+      motionForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setMotionLoading(true);
+        motionError.classList.add("d-none");
+
+        const formData = new FormData(motionForm);
+        try {
+          const response = await fetch(motionForm.dataset.action, {
+            method: "POST",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+
+          if (!response.ok) {
+            let message = "Failed to add motion.";
+            try {
+              const data = await response.json();
+              if (data && data.error) message = data.error;
+            } catch (err) { /* ignore parse errors */ }
+            throw new Error(message);
+          }
+
+          motionModal.hide();
+          window.location.reload();
+        } catch (err) {
+          motionError.textContent = err.message;
+          motionError.classList.remove("d-none");
+        } finally {
+          setMotionLoading(false);
+        }
+      });
+
+      motionModalEl.addEventListener("hidden.bs.modal", () => {
+        motionForm.reset();
+        updateMotionVisibility();
+        motionError.classList.add("d-none");
+        setMotionLoading(false);
+      });
+
+      // Voter modal handling
+      const voterModalEl = document.getElementById("addVoterModal");
+      const voterForm = document.getElementById("addVoterForm");
+      const voterSubmit = document.getElementById("addVoterSubmit");
+      const voterError = document.getElementById("addVoterError");
+      const voterModal = new bootstrap.Modal(voterModalEl);
+
+      function setVoterLoading(isLoading) {
+        voterSubmit.disabled = isLoading;
+        voterSubmit.innerHTML = isLoading
+          ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...'
+          : "Add Voter";
+      }
+
+      voterForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setVoterLoading(true);
+        voterError.classList.add("d-none");
+
+        const formData = new FormData(voterForm);
+        try {
+          const response = await fetch(voterForm.dataset.action, {
+            method: "POST",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+
+          if (!response.ok) {
+            let message = "Failed to add voter.";
+            try {
+              const data = await response.json();
+              if (data && data.error) message = data.error;
+            } catch (err) { /* ignore parse errors */ }
+            throw new Error(message);
+          }
+
+          voterModal.hide();
+          window.location.reload();
+        } catch (err) {
+          voterError.textContent = err.message;
+          voterError.classList.remove("d-none");
+        } finally {
+          setVoterLoading(false);
+        }
+      });
+
+      voterModalEl.addEventListener("hidden.bs.modal", () => {
+        voterForm.reset();
+        voterError.classList.add("d-none");
+        setVoterLoading(false);
+      });
+    });
+  </script>
 {% endblock %}

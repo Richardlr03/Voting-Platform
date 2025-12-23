@@ -1,43 +1,295 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="py-4">
-    <h1 class="mb-3">Admin - Meetings</h1>
+  <div class="container py-4">
 
-    <a href="{{ url_for('create_meeting') }}" class="btn btn-primary mb-3">
-        + Create New Meeting
-    </a>
-
-
-    {% if meetings %}
-      <p class="text-muted">Total meetings: {{ meetings|length }}</p>
-
-      <table class="table table-striped align-middle">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for m in meetings %}
-            <tr>
-              <td>{{ m.id }}</td>
-              <td>
-                <a href="{{ url_for('meeting_detail', meeting_id=m.id) }}">
-                    {{ m.title }}
-                </a>
-              </td>
-              <td>{{ m.description or "-" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <div class="alert alert-info">
-        No meetings found yet. We'll add a “Create Meeting” form soon.
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+      <div>
+        <h1 class="h3 mb-1">Admin · Meetings</h1>
+        <p class="text-muted mb-0">Create, browse, and manage meetings.</p>
       </div>
-    {% endif %}
+
+      <div class="d-flex align-items-center gap-2">
+        <button
+          type="button"
+          class="btn btn-primary"
+          data-bs-toggle="modal"
+          data-bs-target="#createMeetingModal"
+        >
+          <span class="me-1">+</span> Create New Meeting
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-3 p-md-4">
+
+        {% if meetings %}
+
+          <!-- Toolbar -->
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+            <div class="input-group" style="max-width: 420px;">
+              <span class="input-group-text bg-white">
+                <!-- simple magnifier -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                </svg>
+              </span>
+              <input id="meetingSearch" type="text" class="form-control" placeholder="Search meetings by title or description…">
+            </div>
+
+            <small class="text-muted">
+              Click a meeting title to view details.
+            </small>
+          </div>
+
+          <!-- Table -->
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 90px;">ID</th>
+                  <th>Title</th>
+                  <th class="d-none d-md-table-cell">Description</th>
+                  <th style="width: 90px;" class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="meetingTableBody">
+                {% for m in meetings %}
+                  <tr class="meeting-row">
+                    <td class="text-muted fw-semibold">#{{ m.id }}</td>
+
+                    <td class="fw-semibold">
+                      <a class="text-decoration-none" href="{{ url_for('meeting_detail', meeting_id=m.id) }}">
+                        {{ m.title }}
+                      </a>
+                      <div class="small text-muted d-md-none mt-1">
+                        {{ m.description or "—" }}
+                      </div>
+                    </td>
+
+                    <td class="text-muted d-none d-md-table-cell">
+                      {{ m.description or "—" }}
+                    </td>
+
+                    <td class="text-end d-flex justify-content-end gap-2">
+                      <a href="{{ url_for('meeting_detail', meeting_id=m.id) }}" class="btn btn-sm btn-outline-primary">
+                        View
+                      </a>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger delete-meeting-btn"
+                        data-id="{{ m.id }}"
+                        data-title="{{ m.title }}"
+                        data-url="{{ url_for('delete_meeting', meeting_id=m.id) }}"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div id="noResults" class="text-center text-muted py-5 d-none">
+            No meetings match your search.
+          </div>
+
+        {% else %}
+
+          <!-- Empty state -->
+          <div class="text-center py-5">
+            <div class="mx-auto mb-3" style="width: 56px; height: 56px;">
+              <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-calendar2-plus" viewBox="0 0 16 16">
+                  <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M2 2a1 1 0 0 0-1 1v1h14V3a1 1 0 0 0-1-1z"/>
+                  <path d="M1 5v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5zm7 2.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V12a.5.5 0 0 1-1 0v-1.5H6a.5.5 0 0 1 0-1h1.5V8a.5.5 0 0 1 .5-.5"/>
+                </svg>
+              </div>
+            </div>
+
+            <h2 class="h5 mb-2">No meetings yet</h2>
+            <p class="text-muted mb-4">
+              Create your first meeting to start adding motions and inviting voters.
+            </p>
+
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#createMeetingModal"
+            >
+              + Create New Meeting
+            </button>
+          </div>
+
+        {% endif %}
+
+      </div>
+    </div>
   </div>
+
+  <!-- Create meeting modal -->
+  <div class="modal fade" id="createMeetingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create New Meeting</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form
+          id="createMeetingForm"
+          method="POST"
+          action="{{ url_for('create_meeting') }}"
+          data-action="{{ url_for('create_meeting') }}"
+        >
+          <div class="modal-body">
+            <div class="alert alert-danger d-none" id="createMeetingError" role="alert"></div>
+
+            <div class="mb-3">
+              <label for="meetingTitle" class="form-label">Meeting Title</label>
+              <input type="text" class="form-control" id="meetingTitle" name="title" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="meetingDescription" class="form-label">Description (optional)</label>
+              <textarea class="form-control" id="meetingDescription" name="description" rows="3"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="createMeetingSubmit">
+              Create Meeting
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% if meetings %}
+    <script>
+      (function () {
+        const input = document.getElementById("meetingSearch");
+        const rows = Array.from(document.querySelectorAll(".meeting-row"));
+        const noResults = document.getElementById("noResults");
+
+        function textOfRow(row) {
+          return row.innerText.toLowerCase();
+        }
+
+        input.addEventListener("input", function () {
+          const q = input.value.trim().toLowerCase();
+          let visibleCount = 0;
+
+          rows.forEach(row => {
+            const match = textOfRow(row).includes(q);
+            row.classList.toggle("d-none", !match);
+            if (match) visibleCount++;
+          });
+
+          noResults.classList.toggle("d-none", visibleCount !== 0);
+        });
+      })();
+    </script>
+  {% endif %}
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      const modalEl = document.getElementById("createMeetingModal");
+      if (!modalEl) return;
+
+      const form = document.getElementById("createMeetingForm");
+      const submitBtn = document.getElementById("createMeetingSubmit");
+      const errorBox = document.getElementById("createMeetingError");
+      const defaultLabel = submitBtn.innerHTML;
+      const modal = new bootstrap.Modal(modalEl);
+
+      function setLoading(isLoading) {
+        if (isLoading) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...';
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = defaultLabel;
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        errorBox.classList.add("d-none");
+        const formData = new FormData(form);
+
+        try {
+          const response = await fetch(form.dataset.action, {
+            method: "POST",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+
+          if (!response.ok) {
+            let message = "Failed to create meeting.";
+            try {
+              const data = await response.json();
+              if (data && data.error) {
+                message = data.error;
+              }
+            } catch (err) {
+              // ignore JSON parse errors
+            }
+            throw new Error(message);
+          }
+
+          modal.hide();
+          window.location.reload();
+        } catch (err) {
+          errorBox.textContent = err.message;
+          errorBox.classList.remove("d-none");
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      modalEl.addEventListener("hidden.bs.modal", () => {
+        form.reset();
+        errorBox.classList.add("d-none");
+        setLoading(false);
+      });
+
+      document.querySelectorAll(".delete-meeting-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const title = btn.dataset.title || "this meeting";
+          const confirmed = window.confirm(`Delete "${title}"? This will remove all motions, voters, and votes for the meeting.`);
+          if (!confirmed) return;
+
+          const originalText = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = "Deleting...";
+
+          try {
+            const response = await fetch(btn.dataset.url, {
+              method: "POST",
+              headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to delete meeting.");
+            }
+
+            window.location.reload();
+          } catch (err) {
+            alert(err.message);
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        });
+      });
+    });
+  </script>
 {% endblock %}

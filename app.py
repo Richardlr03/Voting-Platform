@@ -490,34 +490,90 @@ def admin_meetings():
 
 @app.route("/admin/meetings/new", methods=["GET", "POST"])
 def create_meeting():
-    if request.method == "POST":
-        title = request.form.get("title")
-        description = request.form.get("description")
+    if request.method == "GET":
+        # Modal posts here; no standalone page needed. Redirect to admin list.
+        return redirect(url_for("admin_meetings"))
 
-        # Create and save meeting
-        new_meeting = Meeting(title=title, description=description)
-        db.session.add(new_meeting)
-        db.session.commit()
+    title = (request.form.get("title") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
 
-        return redirect(url_for('admin_meetings'))
+    if not title:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return {"ok": False, "error": "Title is required."}, 400
 
-    # GET request → show form
-    return render_template("admin/create_meeting.html")
+        flash("Meeting title is required.", "error")
+        return redirect(url_for("admin_meetings"))
+
+    # Create and save meeting
+    new_meeting = Meeting(title=title, description=description)
+    db.session.add(new_meeting)
+    db.session.commit()
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return {
+            "ok": True,
+            "meeting": {
+                "id": new_meeting.id,
+                "title": new_meeting.title,
+                "description": new_meeting.description,
+            },
+        }
+
+    return redirect(url_for('admin_meetings'))
 
 @app.route("/admin/meetings/<int:meeting_id>")
 def meeting_detail(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
     return render_template("admin/meeting_detail.html", meeting=meeting)
 
+@app.route("/admin/meetings/<int:meeting_id>/delete", methods=["POST"])
+def delete_meeting(meeting_id):
+    meeting = Meeting.query.get_or_404(meeting_id)
+
+    motion_ids = [m.id for m in meeting.motions]
+    voter_ids = [v.id for v in meeting.voters]
+
+    if motion_ids:
+        Vote.query.filter(Vote.motion_id.in_(motion_ids)).delete(synchronize_session=False)
+        Option.query.filter(Option.motion_id.in_(motion_ids)).delete(synchronize_session=False)
+        Motion.query.filter(Motion.id.in_(motion_ids)).delete(synchronize_session=False)
+
+    if voter_ids:
+        Vote.query.filter(Vote.voter_id.in_(voter_ids)).delete(synchronize_session=False)
+        Voter.query.filter(Voter.id.in_(voter_ids)).delete(synchronize_session=False)
+
+    db.session.delete(meeting)
+    db.session.commit()
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return {"ok": True}
+
+    flash("Meeting deleted.", "success")
+    return redirect(url_for("admin_meetings"))
+
 @app.route("/admin/meetings/<int:meeting_id>/motions/new", methods=["GET", "POST"])
 def create_motion(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
 
     if request.method == "POST":
-        title = request.form.get("title")
+        title = (request.form.get("title") or "").strip()
         motion_type = request.form.get("type")
-        candidate_text = request.form.get("candidates")
-        num_winners_raw = request.form.get("num_winners")
+        candidate_text = (request.form.get("candidates") or "").strip()
+        num_winners_raw = (request.form.get("num_winners") or "").strip()
+
+        if not title:
+            error = {"ok": False, "error": "Motion title is required."}
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return error, 400
+            flash(error["error"], "error")
+            return redirect(url_for("meeting_detail", meeting_id=meeting.id))
+
+        if motion_type not in ("YES_NO", "CANDIDATE", "PREFERENCE"):
+            error = {"ok": False, "error": "Invalid motion type."}
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return error, 400
+            flash(error["error"], "error")
+            return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
         num_winners = None
         if motion_type == "PREFERENCE":
@@ -552,17 +608,36 @@ def create_motion(meeting_id):
                     db.session.add(Option(motion_id=motion.id, text=name))
 
         db.session.commit()
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return {
+                "ok": True,
+                "motion": {
+                    "id": motion.id,
+                    "title": motion.title,
+                    "type": motion.type,
+                    "num_winners": motion.num_winners,
+                },
+            }
+
         return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
     # GET
-    return render_template("admin/create_motion.html", meeting=meeting)
+    return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
 @app.route("/admin/meetings/<int:meeting_id>/voters/new", methods=["GET", "POST"])
 def create_voter(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
 
     if request.method == "POST":
-        name = request.form.get("name")
+        name = (request.form.get("name") or "").strip()
+
+        if not name:
+            error = {"ok": False, "error": "Voter name is required."}
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return error, 400
+            flash(error["error"], "error")
+            return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
         # Generate a unique code. In a real app you'd loop until unique;
         # for now we assume low collision chance.
@@ -576,10 +651,20 @@ def create_voter(meeting_id):
         db.session.add(voter)
         db.session.commit()
 
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return {
+                "ok": True,
+                "voter": {
+                    "id": voter.id,
+                    "name": voter.name,
+                    "code": voter.code,
+                },
+            }
+
         return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
     # GET -> show form
-    return render_template("admin/create_voter.html", meeting=meeting)
+    return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
 @app.route("/admin/meetings/<int:meeting_id>/results")
 def meeting_results(meeting_id):
