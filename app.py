@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
 import uuid
@@ -776,6 +776,35 @@ def meeting_votes(meeting_id):
         motions_detail=motions_detail,
     )
 
+@app.route("/admin/voter/<int:voter_id>/update", methods=["POST"])
+def update_user(voter_id):
+    """Update voter's name"""
+    voter = Voter.query.get_or_404(voter_id)
+    new_name = request.form.get("name")
+
+    if not new_name or len(new_name.strip()) == 0:
+        return jsonify({"error": "Voter name is required"}), 400
+    
+    try:
+        voter.name = new_name
+        db.session.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error: Could not update voter"}), 500
+    
+@app.route("/admin/voter/<int:voter_id>/delete", methods=["POST"])
+def delete_user(voter_id):
+    """Deletes a voter and their records"""
+    voter = Voter.query.get_or_404(voter_id)
+    
+    try:
+        db.session.delete(voter)
+        db.session.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error: Could not delete voter"}), 500
 
 @app.route("/vote/<code>")
 def voter_dashboard(code):

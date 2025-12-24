@@ -157,9 +157,22 @@
                         </div>
                       </div>
 
-                      <span class="badge text-bg-light border">
-                        <i class="bi bi-person-check me-1"></i> Voter
-                      </span>
+                      <div class="d-flex gap-2">
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-secondary edit-voter-btn" 
+                                data-voter-id="{{ voter.id }}" 
+                                data-voter-name="{{ voter.name }}"
+                                title="Edit Voter">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-danger delete-voter-btn" 
+                                data-voter-id="{{ voter.id }}" 
+                                data-voter-name="{{ voter.name }}"
+                                title="Delete Voter">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 {% endfor %}
@@ -281,6 +294,48 @@
             <button type="submit" class="btn btn-primary" id="addVoterSubmit">Add Voter</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="editVoterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-light border-0">
+          <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Voter</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="editVoterForm" method="POST">
+          <div class="modal-body p-4">
+            <div class="alert alert-danger d-none" id="editVoterError"></div>
+            <div class="mb-3">
+              <label for="editVoterName" class="form-label">Voter Name</label>
+              <input type="text" class="form-control" id="editVoterName" name="name" required>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="editVoterSubmit">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="deleteVoterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-0">
+          <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Delete Voter</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete <strong id="deleteVoterName"></strong>? This action cannot be undone.
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteVoter">Delete Voter</button>
+        </div>
       </div>
     </div>
   </div>
@@ -411,6 +466,62 @@
         voterForm.reset();
         voterError.classList.add("d-none");
         setVoterLoading(false);
+      });
+
+      // --- Edit and Delete Voter Logic ---
+      const editVoterModal = new bootstrap.Modal(document.getElementById('editVoterModal'));
+      const deleteVoterModal = new bootstrap.Modal(document.getElementById('deleteVoterModal'));
+      let currentVoterId = null;
+
+      // Open Edit Modal
+      document.querySelectorAll('.edit-voter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentVoterId = btn.dataset.voterId;
+          document.getElementById('editVoterName').value = btn.dataset.voterName;
+          editVoterModal.show();
+        });
+      });
+
+      // Submit Edit
+      document.getElementById('editVoterForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('editVoterName').value;
+        // Assumes a route like /admin/voter/<id>/update
+        const url = `/admin/voter/${currentVoterId}/update`; 
+        
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            body: new FormData(e.target),
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+          });
+          if (response.ok) window.location.reload();
+          else alert("Failed to update voter");
+        } catch (err) { console.error(err); }
+      });
+
+      // Open Delete Modal
+      document.querySelectorAll('.delete-voter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentVoterId = btn.dataset.voterId;
+          document.getElementById('deleteVoterName').textContent = btn.dataset.voterName;
+          deleteVoterModal.show();
+        });
+      });
+
+      // Confirm Delete
+      document.getElementById('confirmDeleteVoter').addEventListener('click', async () => {
+        // Assumes a route like /admin/voter/<id>/delete
+        const url = `/admin/voter/${currentVoterId}/delete`;
+        
+        try {
+          const response = await fetch(url, { 
+            method: 'POST',
+            headers: { "X-Requested-With": "XMLHttpRequest" } 
+          });
+          if (response.ok) window.location.reload();
+          else alert("Failed to delete voter");
+        } catch (err) { console.error(err); }
       });
     });
   </script>
