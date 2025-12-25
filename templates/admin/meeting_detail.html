@@ -234,7 +234,7 @@
               </select>
             </div>
 
-            <div class="mb-3">
+            <div class="mb-3" id="candidatesGroup">
               <label for="motionCandidates" class="form-label">
                 Candidates (one per line) <span class="text-muted small">(Candidate/Preference)</span>
               </label>
@@ -375,7 +375,7 @@
               </select>
             </div>
 
-            <div class="mb-3">
+            <div class="mb-3" id="editCandidatesGroup">
               <label for="editMotionOptions" class="form-label">
                 Candidates (one per line)
               </label>
@@ -434,7 +434,9 @@
       const motionSubmit = document.getElementById("addMotionSubmit");
       const motionError = document.getElementById("addMotionError");
       const motionModal = new bootstrap.Modal(motionModalEl);
+
       const motionType = document.getElementById("motionType");
+      const candidatesGroup = document.getElementById("candidatesGroup");
       const motionCandidates = document.getElementById("motionCandidates");
       const numWinnersGroup = document.getElementById("numWinnersGroup");
       const numWinnersInput = document.getElementById("motionNumWinners");
@@ -449,11 +451,18 @@
       function updateMotionVisibility() {
         const t = motionType.value;
         const needsCandidates = t === "CANDIDATE" || t === "PREFERENCE";
+
+        candidatesGroup.style.display = needsCandidates ? "block" : "none";
+
         motionCandidates.disabled = !needsCandidates;
         motionCandidates.classList.toggle("bg-light", !needsCandidates);
 
         const needsNumWinners = t === "PREFERENCE";
         numWinnersGroup.style.display = needsNumWinners ? "block" : "none";
+
+        if (!needsCandidates) {
+          document.getElementById("motionCandidates").value = "";
+        }
         if (!needsNumWinners) {
           numWinnersInput.value = "";
         }
@@ -612,6 +621,7 @@
       // --- Edit and Delete Motion Logic ---
       const editMotionModal = new bootstrap.Modal(document.getElementById('editMotionModal'));
       const editTypeSelect = document.getElementById("editMotionType");
+      const editCandidatesGroup = document.getElementById("editCandidatesGroup");
       const editOptionsText = document.getElementById("editMotionOptions");
       const editWinnersGroup = document.getElementById("editNumWinnersGroup");
 
@@ -621,6 +631,9 @@
       function updateEditVisibility() {
         const t = editTypeSelect.value;
         const needsCandidates = t === "CANDIDATE" || t === "PREFERENCE";
+
+        editCandidatesGroup.style.display = needsCandidates ? "block" : "none";
+        
         editOptionsText.disabled = !needsCandidates;
         editOptionsText.classList.toggle("bg-light", !needsCandidates);
         editWinnersGroup.style.display = (t === "PREFERENCE") ? "block" : "none";
