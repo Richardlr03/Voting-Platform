@@ -1,100 +1,154 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="container py-4" style="max-width: 700px;">
   {% if invalid %}
-    <div class="py-5 text-center">
-      <h1 class="mb-3">Invalid voting link</h1>
-      <p class="text-muted">
-        This voting code is not recognised. Please check that you copied the link correctly,
-        or contact the meeting organiser.
-      </p>
+    <div class="card border-0 shadow-sm text-center py-5 px-4">
+      <div class="mx-auto mb-3" style="width: 64px; height: 64px;">
+        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border">
+          <i class="bi bi-exclamation-octagon text-danger" style="font-size: 1.5rem;"></i>
+        </div>
+      </div>
+      <h1 class="h4 mb-2">Invalid voting link</h1>
+      <p class="text-muted mb-4">This voting code is not recognized or the link has expired.</p>
+      <a href="/" class="btn btn-outline-secondary btn-sm">Return Home</a>
     </div>
   {% else %}
-    <div class="py-4">
-      <a href="{{ url_for('voter_dashboard', code=voter.code) }}" class="btn btn-link">
-        &larr; Back to all motions
+
+    <nav class="mb-4">
+      <a href="{{ url_for('voter_dashboard', code=voter.code) }}" class="text-decoration-none text-muted small hover-primary">
+        <i class="bi bi-arrow-left me-1"></i> Back to all motions
       </a>
+    </nav>
 
-      <h1 class="mb-1">{{ motion.title }}</h1>
-      <p class="text-muted mb-3">
-        Meeting: {{ meeting.title }}<br>
-        Voter: {{ voter.name }} &middot; Code: <code>{{ voter.code }}</code><br>
-        Type: {{ motion.type }} &middot; Status: {{ motion.status }}
-        {% if motion.type == "PREFERENCE" and motion.num_winners %}
-          &middot; Winners: {{ motion.num_winners }}
-        {% endif %}
+    <header class="mb-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2">
+          {{ motion.status|title }}
+        </span>
+        <span class="text-muted small">&middot; {{ motion.type|replace('_', ' ')|title }}</span>
+      </div>
+      <h1 class="h3 fw-bold mb-1">{{ motion.title }}</h1>
+      <p class="text-muted small mb-0">
+        <i class="bi bi-building me-1"></i> {{ meeting.title }} 
+        <span class="mx-2">|</span>
+        <i class="bi bi-person me-1"></i> {{ voter.name }}
       </p>
+    </header>
 
-      <form method="POST" action="{{ url_for('vote_motion', code=voter.code, motion_id=motion.id) }}">
-        {% if motion.type == "PREFERENCE" %}
-          <p class="fw-semibold mb-1">
-            Rank the candidates (1 = highest preference).
-            You can leave some blank if you don't want to rank them all.
-          </p>
-
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Candidate</th>
-                  <th style="width: 120px;">Rank</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for opt in motion.options %}
-                  {% set existing_rank = preference_ranks.get(opt.id) if preference_ranks else '' %}
-                  <tr>
-                    <td>{{ opt.text }}</td>
-                    <td>
-                      <input
-                        type="number"
-                        class="form-control form-control-sm"
-                        name="opt_{{ opt.id }}_rank"
-                        min="1"
-                        max="{{ motion.options|length }}"
-                        value="{{ existing_rank }}"
-                      >
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <p class="fw-semibold mb-1">
-            {% if motion.type == "YES_NO" %}
-              Choose one option:
-            {% elif motion.type == "CANDIDATE" %}
-              Choose one candidate:
-            {% else %}
-              Choose one option:
-            {% endif %}
-          </p>
-
-          {% for opt in motion.options %}
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="radio"
-                name="option"
-                id="opt_{{ opt.id }}"
-                value="{{ opt.id }}"
-                {% if simple_vote and simple_vote.option_id == opt.id %}checked{% endif %}
-              >
-              <label class="form-check-label" for="opt_{{ opt.id }}">
-                {{ opt.text }}
-              </label>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-3 p-md-4">
+        <form method="POST" action="{{ url_for('vote_motion', code=voter.code, motion_id=motion.id) }}">
+          
+          {% if motion.type == "PREFERENCE" %}
+            <div class="mb-3">
+              <h2 class="h6 fw-bold">Rank your preferences</h2>
+              <p class="text-muted small">Enter numbers (1 = highest preference).</p>
             </div>
-          {% endfor %}
-        {% endif %}
 
-        <button type="submit" class="btn btn-primary mt-3">
-          Save Vote for This Motion
-        </button>
-        <a href="{{ url_for('voter_dashboard', code=voter.code) }}" class="btn btn-secondary mt-3">
-          Cancel
-        </a>
-      </form>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr class="small text-uppercase text-muted">
+                    <th>Candidate / Option</th>
+                    <th style="width: 100px;">Rank</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for opt in motion.options %}
+                    {% set existing_rank = preference_ranks.get(opt.id) if preference_ranks else '' %}
+                    <tr>
+                      <td class="fw-medium text-dark">{{ opt.text }}</td>
+                      <td>
+                        <input
+                          type="number"
+                          class="form-control form-control-sm text-center fw-bold border-primary-subtle"
+                          name="opt_{{ opt.id }}_rank"
+                          min="1"
+                          max="{{ motion.options|length }}"
+                          value="{{ existing_rank }}"
+                          placeholder="—"
+                        >
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {% else %}
+            <div class="mb-4">
+              <h2 class="h6 fw-bold">
+                {% if motion.type == "YES_NO" %}Cast your vote{% else %}Select one candidate{% endif %}
+              </h2>
+            </div>
+
+            <div class="d-grid gap-2">
+              {% for opt in motion.options %}
+                <input 
+                  type="radio" 
+                  class="btn-check" 
+                  name="option" 
+                  id="opt_{{ opt.id }}" 
+                  value="{{ opt.id }}" 
+                  {% if simple_vote and simple_vote.option_id == opt.id %}checked{% endif %}
+                  required
+                >
+                <label class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between" for="opt_{{ opt.id }}">
+                  <span class="fw-medium">{{ opt.text }}</span>
+                  <i class="bi bi-check-circle-fill check-icon"></i>
+                </label>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <hr class="my-4 border-light">
+
+          <div class="d-flex flex-column flex-md-row gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-send me-2"></i>Submit Vote
+            </button>
+            <a href="{{ url_for('voter_dashboard', code=voter.code) }}" class="btn btn-outline-secondary px-4">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <p class="text-muted small">
+        <i class="bi bi-lock me-1"></i> Your vote is encrypted and stored securely.
+      </p>
     </div>
   {% endif %}
+</div>
+
+<style>
+  /* Button Selection Logic */
+  .btn-check:checked + .btn-outline-primary {
+    background-color: var(--bs-primary-bg-subtle);
+    border-color: var(--bs-primary);
+    color: var(--bs-primary-text-emphasis);
+  }
+  
+  .btn-check + .btn-outline-primary .check-icon {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-check:checked + .btn-outline-primary .check-icon {
+    opacity: 1;
+  }
+
+  .hover-primary:hover {
+    color: var(--bs-primary) !important;
+  }
+
+  /* Focus styling for number inputs */
+  input[type="number"]:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    border-color: #0d6efd;
+  }
+</style>
 {% endblock %}
