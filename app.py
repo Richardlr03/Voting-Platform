@@ -1,8 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
 import uuid
 import os
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
@@ -16,7 +18,22 @@ app.config["SECRET_KEY"] = "dev-secret-key-change-later"  # needed later for ses
 
 db = SQLAlchemy(app)
 
-# --- Models (simple for now) ---
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' # Redirect here if @login_required is triggered
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# --- Models ---
+
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False) # Store email
+    password_hash = db.Column(db.String(256), nullable=False) # Store hashed passwords
 
 class Meeting(db.Model):
     __tablename__ = "meetings"
@@ -481,13 +498,73 @@ def tally_preference_sequential_irv(motion):
 def index():
     return render_template("index.html")
 
-@app.route("/signup")
+@app.route("/signup", methods=["GET", "POST"])
 def signup():
+    if request.method == "POST":
+        username = request.form.get("username")
+        email = request.form.get("email")
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+
+        # Check if password matches
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return redirect(url_for("signup"))
+        
+        # Check if user already exists in db
+        user_exists = User.query.filter((User.username == username) | (User.email == email)).first()
+        if user_exists:
+            flash("Username or Email already exists.", "danger")
+            return redirect(url_for("signup"))
+        
+        # Create new user and hash the password
+        new_user = User(
+            username = username,
+            email = email,
+            password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        )
+
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            flash("Account created successfully! Please log in.", "success")
+            return redirect(url_for("login"))
+        except Exception as e:
+            db.session.rollback()
+            flash("Database error: Could not register user.", "danger")
+            return redirect(url_for("signup"))
+        
     return render_template("signup.html")
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        remember = True if request.form.get("remember") else False
+
+        # 1. Fetch user from MySQL
+        user = User.query.filter_by(username=username).first()
+
+        # 2. Verify user exists and check password hash
+        if not user or not check_password_hash(user.password_hash, password):
+            flash("Invalid username or password. Please try again.", "danger")
+            return redirect(url_for("login"))
+
+        # 3. Log the user in and establish the session
+        login_user(user, remember=remember)
+        
+        flash(f"Welcome back, {user.username}!", "success")
+        return redirect(url_for("admin_meetings"))
+
     return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user() # Clears the session cookie
+    flash("You have been logged out.", "info")
+    return redirect(url_for("login"))
 
 @app.route("/admin/meetings")
 def admin_meetings():
