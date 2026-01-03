@@ -1,29 +1,53 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="py-5">
-    <h1 class="mb-3">Voting Platform</h1>
-    <p class="lead">
-      A simple web app to run club and society elections and motions without counting votes manually.
-    </p>
-
-    <hr class="my-4">
-
-    <p class="mb-1"><strong>Planned features (MVP):</strong></p>
-    <ul>
-      <li>Admins create meetings, motions, and voter lists</li>
-      <li>Voters get a unique link to cast their votes</li>
-      <li>System calculates and displays results instantly</li>
-    </ul>
-
-    <div class="mt-4">
-      <a href="{{ url_for('admin_meetings') }}" class="btn btn-primary btn-lg">
-        Go to Admin Meetings
-      </a>
+<div class="py-5 text-center">
+    <div class="vp-brand-badge mx-auto mb-4" style="width: 80px; height: 80px;">
+        <i class="bi bi-shield-check-fill text-primary" style="font-size: 2.5rem;"></i>
     </div>
 
-    <p class="text-muted mt-4">
-      This is just the starting point. Next: admin dashboard, meetings, and motions.
+    <h1 class="display-5 fw-bold mb-3 text-dark">Secure Digital Voting</h1>
+    <p class="lead mx-auto text-muted mb-5" style="max-width: 600px;">
+        Empower your organization with a reliable, transparent, and easy-to-use platform for elections and motions.
     </p>
-  </div>
+
+    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mb-5">
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('admin_meetings') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm">
+                <i class="bi bi-speedometer2 me-2"></i> Go to Dashboard
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm">
+                Get Started
+            </a>
+            <a href="{{ url_for('signup') }}" class="btn btn-outline-secondary btn-lg px-5 py-3 fw-bold">
+                Create Admin Account
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="row g-4 mt-5 pt-5 border-top">
+        <div class="col-md-4">
+            <div class="p-3">
+                <i class="bi bi-lightning-charge text-primary fs-3 mb-2 d-block"></i>
+                <h3 class="h5 fw-bold">Instant Results</h3>
+                <p class="small text-muted">Real-time tallying using Preference and IRV systems.</p>
+            </div>
+        </div>
+        <div class="col-md-4 border-start border-end">
+            <div class="p-3">
+                <i class="bi bi-lock text-primary fs-3 mb-2 d-block"></i>
+                <h3 class="h5 fw-bold">Secure Access</h3>
+                <p class="small text-muted">Unique voter codes ensure one-person, one-vote integrity.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3">
+                <i class="bi bi-palette text-primary fs-3 mb-2 d-block"></i>
+                <h3 class="h5 fw-bold">User Friendly</h3>
+                <p class="small text-muted">Designed for clarity on both desktop and mobile devices.</p>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
