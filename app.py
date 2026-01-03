@@ -35,12 +35,15 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(150), unique=True, nullable=False) # Store email
     password_hash = db.Column(db.String(256), nullable=False) # Store hashed passwords
 
+    meetings = db.relationship("Meeting", backref="admin", lazy=True)
+
 class Meeting(db.Model):
     __tablename__ = "meetings"
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     # relationships
     motions = db.relationship("Motion", backref="meeting", lazy=True)
@@ -570,7 +573,7 @@ def logout():
 @login_required
 def admin_meetings():
     # For now, just list all meetings in plain form
-    meetings = Meeting.query.all()
+    meetings = Meeting.query.filter_by(admin_id=current_user.id).all()
     return render_template("admin/meetings.html", meetings=meetings)
 
 @app.route("/admin/meetings/new", methods=["GET", "POST"])
@@ -591,7 +594,7 @@ def create_meeting():
         return redirect(url_for("admin_meetings"))
 
     # Create and save meeting
-    new_meeting = Meeting(title=title, description=description)
+    new_meeting = Meeting(title=title, description=description, admin_id=current_user.id)
     db.session.add(new_meeting)
     db.session.commit()
 
