@@ -508,17 +508,6 @@ def signup():
         email = request.form.get("email")
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
-
-        # Check if password matches
-        if password != confirm_password:
-            flash("Passwords do not match.", "danger")
-            return redirect(url_for("signup"))
-        
-        # Check if user already exists in db
-        user_exists = User.query.filter((User.username == username) | (User.email == email)).first()
-        if user_exists:
-            flash("Username or Email already exists.", "danger")
-            return redirect(url_for("signup"))
         
         # Create new user and hash the password
         new_user = User(
@@ -538,6 +527,16 @@ def signup():
             return redirect(url_for("signup"))
         
     return render_template("signup.html")
+
+@app.route("/check-username", methods=["POST"])
+def check_username():
+    data = request.get_json()
+    username = data.get("username", "").strip()
+
+    # Query the database for the username
+    user = User.query.filter_by(username=username).first()
+
+    return jsonify({"exists": user is not None})
 
 @app.route("/login", methods=["GET", "POST"])
 def login():

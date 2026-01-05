@@ -14,49 +14,91 @@
                 <p class="text-muted small">Register to manage meetings and voters</p>
             </div>
 
-            <form method="POST" action="{{ url_for('signup') }}">
+            <form method="POST" action="{{ url_for('signup') }}" class="needs-validation" novalidate>
                 <div class="mb-3">
                     <label for="username" class="form-label small fw-semibold">Username</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
-                        <input type="text" class="form-control bg-light border-start-0" id="username" name="username" placeholder="Enter username" required>
-                    </div>
+                    <input type="text" class="form-control bg-light" id="username" name="username" required>
+                    <div class="invalid-feedback" id="username-feedback">Please enter a username.</div>
                 </div>
 
                 <div class="mb-3">
-                    <label for="email" class="form-label small fw-semibold">Email Address</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
-                        <input type="email" class="form-control bg-light border-start-0" id="email" name="email" placeholder="email@example.com" required>
-                    </div>
+                    <label for="email" class="form-label small fw-semibold">Email</label>
+                    <input type="email" class="form-control bg-light" id="email" name="email" required>
+                    <div class="invalid-feedback">Please enter a valid email address.</div>
                 </div>
 
-                <div class="mb-4">
+                <div class="mb-3">
                     <label for="password" class="form-label small fw-semibold">Password</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
-                        <input type="password" class="form-control bg-light border-start-0" id="password" name="password" placeholder="Create password" required>
-                    </div>
+                    <input type="password" class="form-control bg-light" id="password" name="password" minlength="8" required>
+                    <div class="invalid-feedback">Password must be at least 8 characters long.</div>
                 </div>
 
                 <div class="mb-4">
                     <label for="confirm_password" class="form-label small fw-semibold">Confirm Password</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
-                        <input type="password" class="form-control bg-light border-start-0" id="confirm_password" name="confirm_password" placeholder="Repeat password" required>
-                    </div>
+                    <input type="password" class="form-control bg-light" id="confirm_password" name="confirm_password" required>
+                    <div class="invalid-feedback" id="confirm-feedback">Passwords do not match.</div>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
-                    Sign Up
-                </button>
-
-                <div class="text-center">
-                    <span class="text-muted small">Already have an account?</span>
-                    <a href="{{ url_for('login') }}" class="small fw-bold text-decoration-none">Log In</a>
-                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Sign Up</button>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+  'use strict'
+
+  const form = document.querySelector('.needs-validation')
+  const usernameInput = document.getElementById('username')
+  const usernameFeedback = document.getElementById('username-feedback')
+
+  // Function to check username existence in DB
+  async function validateUsername() {
+    const username = usernameInput.value.trim();
+    if (username.length < 3) return;
+
+    try {
+      const response = await fetch("{{ url_for('check_username') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username })
+      });
+      const data = await response.json();
+
+      if (data.exists) {
+        // Manually set field as invalid if username exists in DB
+        usernameInput.setCustomValidity("Username already exists.");
+        usernameFeedback.textContent = "Username already exists.";
+      } else {
+        usernameInput.setCustomValidity("");
+        usernameFeedback.textContent = "Please choose a username.";
+      }
+    } catch (error) {
+      console.error("Error checking username:", error);
+    }
+  }
+
+  // Check username when user leaves the field or stops typing
+  usernameInput.addEventListener('blur', validateUsername);
+
+  form.addEventListener('submit', function (event) {
+    // Re-run the checks before final submission
+    const password = document.getElementById('password')
+    const confirm = document.getElementById('confirm_password')
+
+    if (password.value !== confirm.value) {
+      confirm.setCustomValidity('Passwords do not match')
+    } else {
+      confirm.setCustomValidity('')
+    }
+
+    if (!form.checkValidity()) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    form.classList.add('was-validated')
+  }, false)
+})()
+</script>
 {% endblock %}
