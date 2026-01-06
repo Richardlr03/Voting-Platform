@@ -1032,7 +1032,7 @@ def voter_dashboard(code):
 @app.route("/vote/<code>/motion/<int:motion_id>", methods=["GET", "POST"])
 def vote_motion(code, motion_id):
     if session.get('voter_code') != code:
-        flash("Please join the meeting with your private key first.", "join_error")
+        flash("Please join the meeting with your private key.", "join_error")
         return redirect(url_for('join_meeting'))
     
     voter = Voter.query.filter_by(code=code).first()
