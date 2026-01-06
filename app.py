@@ -590,6 +590,29 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("login"))
 
+@app.route("/join", methods=["GET", "POST"])
+def join_meeting():
+    if request.method == "POST":
+        # Safe string handling to prevent NoneType errors
+        raw_code = request.form.get("voter_code") or ""
+        code = raw_code.strip().upper()
+        
+        if not code:
+            flash("Please enter a private key.", "join_error")
+            return redirect(url_for('join_meeting'))
+
+        voter = Voter.query.filter_by(code=code).first()
+        
+        if voter:
+            return redirect(url_for('voter_dashboard', code=voter.code))
+        else:
+            # Use flash and REDIRECT to prevent persistent errors on refresh
+            flash("Invalid private key. Please try again.", "join_error")
+            return redirect(url_for('join_meeting'))
+            
+    return render_template("voter/join.html")
+
+
 @app.route("/admin/meetings")
 @login_required
 def admin_meetings():
