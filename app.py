@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
@@ -593,7 +593,6 @@ def logout():
 @app.route("/join", methods=["GET", "POST"])
 def join_meeting():
     if request.method == "POST":
-        # Safe string handling to prevent NoneType errors
         raw_code = request.form.get("voter_code") or ""
         code = raw_code.strip().upper()
         
@@ -604,6 +603,9 @@ def join_meeting():
         voter = Voter.query.filter_by(code=code).first()
         
         if voter:
+            session['voter_id'] = voter.id
+            session['voter_name'] = voter.name
+            session['voter_code'] = voter.code
             return redirect(url_for('voter_dashboard', code=voter.code))
         else:
             # Use flash and REDIRECT to prevent persistent errors on refresh
@@ -612,6 +614,12 @@ def join_meeting():
             
     return render_template("voter/join.html")
 
+@app.route("/voter-logout")
+def voter_logout():
+    session.pop('voter_id', None)
+    session.pop('voter_name', None)
+    session.pop('voter_code', None)
+    return redirect(url_for("join_meeting"))
 
 @app.route("/admin/meetings")
 @login_required
@@ -988,6 +996,10 @@ def delete_motion(motion_id):
 
 @app.route("/vote/<code>")
 def voter_dashboard(code):
+    if session.get('voter_code') != code:
+        flash("Please join the meeting with your private key first.", "join_error")
+        return redirect(url_for('join_meeting'))
+    
     voter = Voter.query.filter_by(code=code).first()
 
     if not voter:
@@ -1019,6 +1031,10 @@ def voter_dashboard(code):
 
 @app.route("/vote/<code>/motion/<int:motion_id>", methods=["GET", "POST"])
 def vote_motion(code, motion_id):
+    if session.get('voter_code') != code:
+        flash("Please join the meeting with your private key first.", "join_error")
+        return redirect(url_for('join_meeting'))
+    
     voter = Voter.query.filter_by(code=code).first()
 
     if not voter:
