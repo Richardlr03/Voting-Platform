@@ -565,7 +565,7 @@ def forgot_password():
     if request.method == "POST":
         username = request.form.get("username")
         email = request.form.get("email")
-        new_password = request.form.get("new_password")
+        new_password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
 
         # Verify user exists with given username and email
@@ -573,6 +573,19 @@ def forgot_password():
 
         if not user:
             flash("No account found with the username and email.", "reset_error")
+            return redirect(url_for("forgot_password"))
+
+        # Validate passwords
+        if not new_password or not confirm_password:
+            flash("Please provide a new password and confirm it.", "reset_error")
+            return redirect(url_for("forgot_password"))
+
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "reset_error")
+            return redirect(url_for("forgot_password"))
+
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters long.", "reset_error")
             return redirect(url_for("forgot_password"))
 
         # Update the user's password
