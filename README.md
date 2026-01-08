@@ -4,3 +4,9 @@
 2. venv\Scripts\activate
 3. Set-ExecutionPolicy -Scope CurrentUser RemoteSigned (if needed)
 4. python app.py (checking)
+
+## Commit Messages Guidelines
+
+1. (feat) - Implementing new features
+2. (update) - Updating and modifying an existing feature
+3. (update UI) - Modifying certain UI
