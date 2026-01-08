@@ -104,15 +104,21 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto align-items-center">
             {% if current_user.is_authenticated %}
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_meetings') }}">Dashboard</a></li>
+              <li class="nav-item"><span class="nav-link text-white-50 px-3">| Admin: {{ current_user.username }}</span></li>
+              <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a></li>
+
+            {% elif session.get('voter_id') %}
               <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('admin_meetings') }}">Dashboard</a>
+                <a class="nav-link" href="{{ url_for('voter_dashboard', code=session.get('voter_code')) }}">My Votes</a>
               </li>
               <li class="nav-item">
-                <span class="nav-link text-white-50 px-3">| Hello, {{ current_user.username }}</span>
+                <span class="nav-link text-white-50 px-3">| Voter: {{ session.get('voter_name') }}</span>
               </li>
               <li class="nav-item">
-                <a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a>
+                <a class="nav-link text-danger" href="{{ url_for('voter_logout') }}">Logout</a>
               </li>
+            
             {% else %}
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('login') }}">Login</a>
@@ -131,7 +137,7 @@
       {% if messages %}
         <div class="container mt-3">
           {% for category, message in messages %}
-            {% if category not in ['reset_error', 'login_error'] %}
+            {% if category not in ['reset_error', 'login_error', 'join_error'] %}
             {% set bs =
               'success' if category == 'success'
               else 'danger' if category == 'error'

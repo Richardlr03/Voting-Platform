@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Join Meeting - Voting Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-center" style="min-height: 60vh;">
+    <div class="card border-0 shadow-lg" style="width: 100%; max-width: 400px; background: rgba(255,255,255,0.9); border-radius: 20px;">
+        <div class="card-body p-4 p-md-5 text-center">
+            <div class="vp-brand-badge mx-auto mb-3" style="width: 60px; height: 60px;">
+                <i class="bi bi-key-fill fs-3 text-primary"></i>
+            </div>
+            <h2 class="h4 fw-bold mb-1">Join Meeting</h2>
+            <p class="text-muted small mb-4">Enter your 8-character private key to vote</p>
+
+            {% with messages = get_flashed_messages(category_filter=["join_error"]) %}
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-danger py-2 px-3 border-0 small mb-4 d-flex align-items-center text-start" 
+                        style="background-color: rgba(220, 53, 69, 0.1); color: #dc3545; border-radius: 12px;">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        <div>{{ message }}</div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="mb-4">
+                    <input type="text" name="voter_code" class="form-control form-control-lg text-center fw-bold text-uppercase" 
+                           placeholder="A1B2C3D4" maxlength="8" style="letter-spacing: 2px;" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm">
+                    Enter Meeting
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

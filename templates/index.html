@@ -16,12 +16,21 @@
             <a href="{{ url_for('admin_meetings') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm">
                 <i class="bi bi-speedometer2 me-2"></i> Go to Dashboard
             </a>
+
+        {% elif session.get('voter_id') %}
+            <a href="{{ url_for('voter_dashboard', code=session.get('voter_code')) }}" class="btn btn-success btn-lg px-5 py-3 fw-bold shadow-sm">
+                Go to My Meeting
+            </a>
+        
         {% else %}
             <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm">
                 Get Started
             </a>
             <a href="{{ url_for('signup') }}" class="btn btn-outline-secondary btn-lg px-5 py-3 fw-bold">
                 Create Admin Account
+            </a>
+            <a href="{{ url_for('join_meeting') }}" class="btn btn-success btn-lg px-5 py-3 fw-bold shadow-sm">
+                <i class="bi bi-person-check me-2"></i> Join as Voter
             </a>
         {% endif %}
     </div>
