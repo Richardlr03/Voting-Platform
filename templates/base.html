@@ -144,8 +144,8 @@
               else 'warning' if category == 'warning'
               else 'info'
             %}
-            <div class="alert alert-{{ bs }} alert-dismissible fade show d-flex align-items-start gap-2 vp-surface py-3" role="alert">
-              <div class="mt-1">
+            <div class="alert alert-{{ bs }} alert-dismissible fade show d-flex align-items-center gap-2 vp-surface py-3" role="alert">
+              <div>
                 {% if bs == 'success' %}
                   <i class="bi bi-check-circle-fill"></i>
                 {% elif bs == 'danger' %}
