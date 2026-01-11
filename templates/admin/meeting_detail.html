@@ -437,6 +437,7 @@
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-primary" id="editMotionSubmit">Save Changes</button>
           </div>
+          </div>
         </form>
       </div>
     </div>
@@ -717,7 +718,10 @@
         btn.addEventListener('click', () => {
           currentMotionId = btn.dataset.motionId;
           document.getElementById('deleteMotionTitleDisplay').textContent = btn.dataset.motionTitle;
+          console.log(btn.dataset.motionTitle);
+          console.log(111111);
           deleteMotionModal.show();
+          console.log(22222);
         });
       });
 
