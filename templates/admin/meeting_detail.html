@@ -95,11 +95,19 @@
                       </div>
 
                       <div class="d-flex gap-2">
+                        <button 
+                            class="btn btn-outline-primary btn-sm" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#statusModal{{ motion.id }}"
+                            title="Update Status">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
                         <button type="button" 
                                 class="btn btn-sm btn-outline-secondary edit-motion-btn" 
                                 data-motion-id="{{ motion.id }}" 
                                 data-motion-title="{{ motion.title }}"
                                 data-motion-type="{{ motion.type }}"
+                                data-motion-status="{{ motion.status }}"
                                 data-motion-winners="{{ motion.num_winners or '' }}"
                                 data-motion-options="{% for c in motion.options %}{{ c.text }}{{ '\n' if not loop.last }}{% endfor %}"
                                 title="Edit Motion">    
@@ -113,6 +121,34 @@
                           <i class="bi bi-trash"></i>
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <!-- Update Motion Status Modal -->
+                  <div class="modal fade" id="statusModal{{ motion.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-sm modal-dialog-centered">
+                        <div class="modal-content border-0 shadow" style="border-radius: 15px;">
+                            
+                            <div class="modal-header border-0 pb-0 d-flex justify-content-center position-relative">
+                                <h5 class="modal-title fw-bold" id="statusModalLabel{{ motion.id }}">Update Status</h5>
+                                <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" 
+                                        style="top: 20px; right: 20px;"></button>
+                            </div>
+
+                            <form action="{{ url_for('update_motion_status', motion_id=motion.id) }}" method="POST">
+                                <div class="modal-body p-4 pt-2 text-center">
+                                    <p class="small text-muted mb-4">Current: <b>{{ motion.status }}</b></p>
+                                    
+                                    <select name="status" class="form-select bg-light border-0 py-2 mb-3">
+                                        <option value="DRAFT" {% if motion.status == 'DRAFT' %}selected{% endif %}>Draft</option>
+                                        <option value="OPEN" {% if motion.status == 'OPEN' %}selected{% endif %}>Open</option>
+                                        <option value="CLOSED" {% if motion.status == 'CLOSED' %}selected{% endif %}>Closed</option>
+                                    </select>
+
+                                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Update</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                   </div>
                 {% endfor %}
@@ -308,6 +344,7 @@
     </div>
   </div>
 
+  <!--Edit Motion Modal-->
   <div class="modal fade" id="editVoterModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content border-0 shadow">
@@ -332,6 +369,7 @@
     </div>
   </div>
 
+  <!--Delete Voter Modal-->
   <div class="modal fade" id="deleteVoterModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content border-0 shadow">
@@ -350,6 +388,7 @@
     </div>
   </div>
 
+  <!--Edit Motion Modal-->
   <div class="modal fade" id="editMotionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content border-0 shadow">
@@ -402,11 +441,13 @@
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-primary" id="editMotionSubmit">Save Changes</button>
           </div>
+          </div>
         </form>
       </div>
     </div>
   </div>
 
+  <!--Delete Motion Modal-->
   <div class="modal fade" id="deleteMotionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content border-0 shadow">
@@ -647,6 +688,11 @@
           document.getElementById('editMotionTitle').value = btn.dataset.motionTitle;
           editTypeSelect.value = btn.dataset.motionType;
           editOptionsText.value = btn.dataset.motionOptions;
+          // set status
+          var statusSelect = document.getElementById('editMotionStatus');
+          if (statusSelect && btn.dataset.motionStatus) {
+            statusSelect.value = btn.dataset.motionStatus;
+          }
           document.getElementById('editMotionNumWinners').value = btn.dataset.motionWinners;
           
           updateEditVisibility();
@@ -676,7 +722,10 @@
         btn.addEventListener('click', () => {
           currentMotionId = btn.dataset.motionId;
           document.getElementById('deleteMotionTitleDisplay').textContent = btn.dataset.motionTitle;
+          console.log(btn.dataset.motionTitle);
+          console.log(111111);
           deleteMotionModal.show();
+          console.log(22222);
         });
       });
 

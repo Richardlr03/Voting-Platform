@@ -565,7 +565,7 @@ def forgot_password():
     if request.method == "POST":
         username = request.form.get("username")
         email = request.form.get("email")
-        new_password = request.form.get("new_password")
+        new_password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
 
         # Verify user exists with given username and email
@@ -573,6 +573,19 @@ def forgot_password():
 
         if not user:
             flash("No account found with the username and email.", "reset_error")
+            return redirect(url_for("forgot_password"))
+
+        # Validate passwords
+        if not new_password or not confirm_password:
+            flash("Please provide a new password and confirm it.", "reset_error")
+            return redirect(url_for("forgot_password"))
+
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "reset_error")
+            return redirect(url_for("forgot_password"))
+
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters long.", "reset_error")
             return redirect(url_for("forgot_password"))
 
         # Update the user's password
@@ -963,10 +976,24 @@ def update_motion(motion_id):
     motion.title = request.form.get('title')
     motion.type = request.form.get('type')
     motion.num_winners = request.form.get('num_winners', type=int) or 1
+    # allow updating status from the edit form
+    new_status = request.form.get('status')
+    if new_status:
+        allowed_statuses = {"DRAFT", "PENDING", "OPEN", "CLOSED", "APPROVED", "REJECTED", "PASSED", "FAILED"}
+        if new_status not in allowed_statuses:
+            return jsonify({"error": "Invalid status value"}), 400
+        motion.status = new_status
 
     if motion.type in ['CANDIDATE', 'PREFERENCE']:
-        # Clear existing candidates first
-        Option.query.filter_by(motion_id=motion.id).delete()
+        # Clear existing candidates first. Remove any votes tied to this motion
+        # to avoid foreign-key constraint errors when deleting options.
+        try:
+            Vote.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
+        except Exception:
+            # If Vote table not present or other issue, continue and let commit handle errors
+            pass
+
+        Option.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
 
         raw_options = request.form.get('options', '')
         for name in [c.strip() for c in raw_options.split('\n') if c.strip()]:
@@ -993,6 +1020,25 @@ def delete_motion(motion_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Database error: Could not delete motion"}), 500
+
+@app.route("/update_motion_status/<int:motion_id>", methods=["POST"])
+@login_required
+def update_motion_status(motion_id):
+    motion = Motion.query.get_or_404(motion_id)
+    # Convert to uppercase to match the allowed list
+    new_status = request.form.get("status", "").upper() 
+
+    allowed_statuses = {"DRAFT", "OPEN", "CLOSED"} # Add others as needed
+
+    if new_status in allowed_statuses:
+        motion.status = new_status
+        db.session.commit() # This saves it to the DB
+        flash(f"Status updated to {new_status}", "success")
+    else:
+        flash("Invalid status selection.", "danger")
+        
+    # Ensure you redirect to meeting_detail so the UI updates
+    return redirect(url_for("meeting_detail", meeting_id=motion.meeting_id))
 
 @app.route("/vote/<code>")
 def voter_dashboard(code):

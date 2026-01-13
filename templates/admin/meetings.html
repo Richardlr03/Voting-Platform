@@ -50,7 +50,6 @@
             <table class="table align-middle mb-0">
               <thead class="table-light">
                 <tr>
-                  <th style="width: 90px;">ID</th>
                   <th>Title</th>
                   <th class="d-none d-md-table-cell">Description</th>
                   <th style="width: 90px;" class="text-center">Action</th>
@@ -59,8 +58,6 @@
               <tbody id="meetingTableBody">
                 {% for m in meetings %}
                   <tr class="meeting-row">
-                    <td class="text-muted fw-semibold">#{{ m.id }}</td>
-
                     <td class="fw-semibold">
                       <a class="text-decoration-none" href="{{ url_for('meeting_detail', meeting_id=m.id) }}">
                         {{ m.title }}
@@ -115,15 +112,6 @@
             <p class="text-muted mb-4">
               Create your first meeting to start adding motions and inviting voters.
             </p>
-
-            <button
-              type="button"
-              class="btn btn-primary"
-              data-bs-toggle="modal"
-              data-bs-target="#createMeetingModal"
-            >
-              + Create New Meeting
-            </button>
           </div>
 
         {% endif %}
