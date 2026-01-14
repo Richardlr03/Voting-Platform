@@ -634,6 +634,10 @@ def voter_logout():
     session.pop('voter_code', None)
     return redirect(url_for("join_meeting"))
 
+@app.route("/voting-systems")
+def voting_systems():
+    return render_template("voting_systems.html")
+
 @app.route("/admin/meetings")
 @login_required
 def admin_meetings():
