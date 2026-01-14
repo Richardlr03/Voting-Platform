@@ -2,7 +2,67 @@
 {% block title %}Voting Systems Guide{% endblock %}
 
 {% block content %}
-<div>
-    <h1>Voting Systems</h1>
+<div class="container py-2" style="max-width: 800px;">
+    <div class="text-center mb-5">
+        <h1 class="text-center mb-2">Understanding Our Voting Systems</h1>
+        <p class="text-muted">A clear guide on how your votes are counted and winners are determined.</p>
+    </div>
+
+    <div class="accordion accordion-flush shadow-sm rounded-4 overflow-hidden" id="votingAccordion">
+        <div class="accordion-item border-bottom">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                    <i class="bi bi-check-lg text-primary me-3"></i> Yes / No / Abstain
+                </button>
+            </h2>
+            <div id="collapseOne" class="accordion-collpase collapse" data-bs-parent="#votingAccordion">
+                <div class="accordion-body bg-light-subtle">
+                    <p class="small text-muted mb-3">Standard binary voting for resolutions and approvals.</p>
+                    <ul class="small ps-3 mb-0">
+                        <li class="mb-2"><b>Yes/No:</b> Direct support or opposition.</li>
+                        <li class="mb-2"><b>Abstain:</b> Records your presence without taking a side.</li>
+                        <li><b>Calculation:</b> Results are calculated as percentages of the total votes cast for each option.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-bottom">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                    <i class="bi bi-person-badge text-success me-3"></i> Candidate Election
+                </button>
+            </h2>
+            <div id="collapseTwo" class="accordion-collpase collapse" data-bs-parent="#votingAccordion">
+                <div class="accordion-body bg-light-subtle">
+                    <p class="small text-muted mb-3">A "First-Past-The-Post" system used for choosing a single individual from a list.</p>
+                    <ul class="small ps-3 mb-0">
+                        <li class="mb-2"><b>Choice:</b> Voters select exactly one candidate.</li>
+                        <li><b>Winner:</b> The candidate with the highest number of individual votes is elected.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item border-bottom">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                    <i class="bi bi-list-ol text-info me-3"></i> Preference Voting (Ranked Choice)
+                </button>
+            </h2>
+            <div id="collapseThree" class="accordion-collpase collapse" data-bs-parent="#votingAccordion">
+                <div class="accordion-body bg-light-subtle">
+                    <p class="small text-muted mb-3">Uses Sequential Instant Runoff Voting (IRV) to ensure the winner has broad support.</p>
+                    <ul class="small ps-3 mb-0">
+                        <li class="mb-2"><b>Ranking:</b> Voters rank candidates in order of preference (1st, 2nd, 3rd...).</li>
+                        <li class="mb-2"><b>Elimination:</b> If no one has a majority, the candidate with the fewest votes is eliminated.</li>
+                        <li class="mb-2"><b>Transfer:</b> Votes for eliminated candidates are transferred to the voter's next available preference.</li>
+                        <li><b>Multi-winner:</b> If the motion specifies multiple winners, the process repeats sequentially until all seats are filled.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 {% endblock %}
