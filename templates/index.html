@@ -1,62 +1,90 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="py-5 text-center">
-    <div class="vp-brand-badge mx-auto mb-4" style="width: 80px; height: 80px;">
+<div class="py-4 py-md-5 text-center">
+    <div class="vp-brand-badge mx-auto mb-3 mb-md-4 brand-icon-mobile" style="width: 80px; height: 80px;">
         <i class="bi bi-shield-check-fill text-primary" style="font-size: 2.5rem;"></i>
     </div>
 
-    <h1 class="display-5 fw-bold mb-3 text-dark">Secure Digital Voting</h1>
-    <p class="lead mx-auto text-muted mb-5" style="max-width: 600px;">
+    <h1 class="fw-bold mb-2 mb-md-3 text-dark responsive-title">Secure Digital Voting</h1>
+    <p class="mx-auto text-muted mb-4 mb-md-5 px-3 px-md-0 responsive-lead">
         Empower your organization with a reliable, transparent, and easy-to-use platform for elections and motions.
     </p>
 
-    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mb-5">
+    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5 px-3">
         {% if current_user.is_authenticated %}
-            <a href="{{ url_for('admin_meetings') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm">
+            <a href="{{ url_for('admin_meetings') }}" class="btn btn-primary btn-md-lg px-4 py-2 py-md-3 fw-bold shadow-sm">
                 <i class="bi bi-speedometer2 me-2"></i> Go to Dashboard
             </a>
 
         {% elif session.get('voter_id') %}
-            <a href="{{ url_for('voter_dashboard', code=session.get('voter_code')) }}" class="btn btn-success btn-lg px-5 py-3 fw-bold shadow-sm">
+            <a href="{{ url_for('voter_dashboard', code=session.get('voter_code')) }}" class="btn btn-success btn-md-lg px-5 py-3 py-md-3 fw-bold shadow-sm">
                 Go to My Meeting
             </a>
         
         {% else %}
-            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-md-lg px-4 py-2 py-md-3 fw-bold shadow-sm">
                 Get Started
             </a>
-            <a href="{{ url_for('signup') }}" class="btn btn-outline-secondary btn-lg px-5 py-3 fw-bold">
+            <a href="{{ url_for('signup') }}" class="btn btn-outline-secondary btn-md-lg px-4 py-2 py-md-3 fw-bold">
                 Create Admin Account
             </a>
-            <a href="{{ url_for('join_meeting') }}" class="btn btn-success btn-lg px-5 py-3 fw-bold shadow-sm">
+            <a href="{{ url_for('join_meeting') }}" class="btn btn-success btn-md-lg px-4 py-2 py-md-3 fw-bold shadow-sm">
                 <i class="bi bi-person-check me-2"></i> Join as Voter
             </a>
         {% endif %}
     </div>
 
-    <div class="row g-4 mt-5 pt-5 border-top">
-        <div class="col-md-4">
-            <div class="p-3">
-                <i class="bi bi-lightning-charge text-primary fs-3 mb-2 d-block"></i>
-                <h3 class="h5 fw-bold">Instant Results</h3>
-                <p class="small text-muted">Real-time tallying using Preference and IRV systems.</p>
+    <div class="row g-3 g-md-4 mt-4 pt-4 border-top">
+        <div class="col-6 col-md-4">
+            <div class="p-2 p-md-3">
+                <i class="bi bi-lightning-charge text-primary fs-4 fs-md-3 mb-1 d-block"></i>
+                <h3 class="h6 fw-bold mb-1">Instant Results</h3>
+                <p class="x-small text-muted mb-0">Real-time tallying using Preference and IRV systems.</p>
             </div>
         </div>
-        <div class="col-md-4 border-start border-end">
-            <div class="p-3">
-                <i class="bi bi-lock text-primary fs-3 mb-2 d-block"></i>
-                <h3 class="h5 fw-bold">Secure Access</h3>
-                <p class="small text-muted">Unique voter codes ensure one-person, one-vote integrity.</p>
+        <div class="col-6 col-md-4 border-md-start border-md-end">
+            <div class="p-2 p-md-3">
+                <i class="bi bi-lock text-primary fs-4 fs-md-3 mb-1 d-block"></i>
+                <h3 class="h6 fw-bold mb-1">Secure Access</h3>
+                <p class="x-small text-muted mb-0">Unique voter codes ensure one-person, one-vote integrity.</p>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="p-3">
-                <i class="bi bi-palette text-primary fs-3 mb-2 d-block"></i>
-                <h3 class="h5 fw-bold">User Friendly</h3>
-                <p class="small text-muted">Designed for clarity on both desktop and mobile devices.</p>
+        <div class="col-12 col-md-4">
+            <div class="p-2 p-md-3">
+                <i class="bi bi-palette text-primary fs-4 fs-md-3 mb-1 d-block"></i>
+                <h3 class="h6 fw-bold mb-1">User Friendly</h3>
+                <p class="x-small text-muted mb-0">Designed for clarity on both desktop and mobile devices.</p>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+  /* Base Desktop Styles are handled by Bootstrap */
+  
+  /* Mobile Specific Overrides (< 576px) */
+  @media (max-width: 576px) {
+    .brand-icon-mobile {
+      width: 60px !important;
+      height: 60px !important;
+    }
+    .brand-icon-mobile i {
+      font-size: 1.8rem !important;
+    }
+    .responsive-title {
+      font-size: 1.75rem; /* Smaller than display-5 */
+    }
+    .responsive-lead {
+      font-size: 0.95rem;
+    }
+    .x-small {
+      font-size: 0.75rem;
+    }
+    /* Grid adjustments to fit more horizontally */
+    .border-md-start, .border-md-end {
+        border: none !important;
+    }
+  }
+</style>
 {% endblock %}
