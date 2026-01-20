@@ -7,29 +7,29 @@
     </div>
 
     <h1 class="fw-bold mb-2 mb-md-3 text-dark responsive-title">Secure Digital Voting</h1>
-    <p class="mx-auto text-muted mb-4 mb-md-5 px-3 px-md-0 responsive-lead">
+    <p class="mx-auto text-muted mb-3 mb-md-4 px-3 px-md-0 responsive-lead">
         Empower your organization with a reliable, transparent, and easy-to-use platform for elections and motions.
     </p>
 
-    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5 px-3">
+    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mb-5 px-3">
         {% if current_user.is_authenticated %}
-            <a href="{{ url_for('admin_meetings') }}" class="btn btn-primary btn-md-lg px-4 py-2 py-md-3 fw-bold shadow-sm">
+            <a href="{{ url_for('admin_meetings') }}" class="btn btn-primary btn-lg px-5 py-3 py-md-4 fw-bold shadow-sm btn-hero">
                 <i class="bi bi-speedometer2 me-2"></i> Go to Dashboard
             </a>
 
         {% elif session.get('voter_id') %}
-            <a href="{{ url_for('voter_dashboard', code=session.get('voter_code')) }}" class="btn btn-success btn-md-lg px-5 py-3 py-md-3 fw-bold shadow-sm">
-                Go to My Meeting
+            <a href="{{ url_for('voter_dashboard', code=session.get('voter_code')) }}" class="btn btn-success btn-lg px-5 py-3 py-md-4 fw-bold shadow-sm btn-hero">
+                <i class="bi bi-person-check me-2"></i> Go to My Meeting
             </a>
         
         {% else %}
-            <a href="{{ url_for('login') }}" class="btn btn-primary btn-md-lg px-4 py-2 py-md-3 fw-bold shadow-sm">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-5 py-3 py-md-4 fw-bold shadow-sm btn-hero">
                 Get Started
             </a>
-            <a href="{{ url_for('signup') }}" class="btn btn-outline-secondary btn-md-lg px-4 py-2 py-md-3 fw-bold">
+            <a href="{{ url_for('signup') }}" class="btn btn-outline-secondary btn-lg px-5 py-3 py-md-4 fw-bold btn-hero">
                 Create Admin Account
             </a>
-            <a href="{{ url_for('join_meeting') }}" class="btn btn-success btn-md-lg px-4 py-2 py-md-3 fw-bold shadow-sm">
+            <a href="{{ url_for('join_meeting') }}" class="btn btn-success btn-lg px-5 py-3 py-md-4 fw-bold shadow-sm btn-hero">
                 <i class="bi bi-person-check me-2"></i> Join as Voter
             </a>
         {% endif %}
@@ -61,7 +61,29 @@
 </div>
 
 <style>
-  /* Base Desktop Styles are handled by Bootstrap */
+  /* Desktop Styles */
+    .responsive-lead {
+        font-size: 1.5rem;
+        line-height: 1.6;
+        font-weight:300;
+    }
+
+    .btn-hero {
+        font-size: 1.2rem !important; /* Forces larger font size on desktop */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .btn-hero:hover {
+        transform: translateY(-3px); /* Subtle lift effect */
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+    }
+
+    .btn-hero i {
+        font-size: 1rem; /* Increases icon size to match text */
+    }
   
   /* Mobile Specific Overrides (< 576px) */
   @media (max-width: 576px) {
@@ -84,6 +106,20 @@
     /* Grid adjustments to fit more horizontally */
     .border-md-start, .border-md-end {
         border: none !important;
+    }
+
+    .btn-hero {
+      font-size: 1.05rem !important; /* Smaller for mobile */
+      padding: 0.8rem 1.2rem !important; /* Reduced padding for mobile */
+      width: 100%; /* Makes buttons full-width for easy tapping on mobile */
+    }
+    
+    .btn-hero i {
+      font-size: 1.2rem !important;
+    }
+
+    .d-grid.gap-3 {
+        gap: 0.75rem !important; /* Tighter spacing between buttons on mobile */
     }
   }
 </style>
