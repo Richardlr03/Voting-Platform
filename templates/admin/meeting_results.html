@@ -3,15 +3,212 @@
 {% block content %}
   <div class="py-2">
 
+    <!-- Mobile layout -->
+    <div class="d-md-none mb-3">
+      <a href="{{ url_for('meeting_detail', meeting_id=meeting.id) }}" class="btn btn-outline-secondary w-100">
+        <i class="bi bi-arrow-left me-1"></i> Back to meeting
+      </a>
+    </div>
+
+    <div class="d-md-none card border-0 shadow-sm rounded-4 mb-3">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <h1 class="h5 mb-1">Results</h1>
+            <div class="text-muted small">{{ meeting.title }}</div>
+          </div>
+          <div class="text-muted small">
+            <i class="bi bi-bar-chart me-1"></i> Results overview
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if results %}
+      <div class="d-md-none vstack gap-3">
+        {% for item in results %}
+          {% set motion = item.motion %}
+
+          {% set status_cls =
+            'success' if motion.status in ['OPEN', 'APPROVED', 'PASSED']
+            else 'secondary' if motion.status in ['DRAFT', 'PENDING']
+            else 'danger' if motion.status in ['REJECTED', 'FAILED', 'CLOSED']
+            else 'info'
+          %}
+
+          {% set type_cls =
+            'primary' if motion.type in ['YES_NO']
+            else 'warning' if motion.type in ['CANDIDATE']
+            else 'info'
+          %}
+
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-3">
+              <div class="d-flex align-items-start justify-content-between gap-2">
+                <div>
+                  <h2 class="h6 mb-1">{{ motion.title }}</h2>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="badge text-bg-{{ type_cls }}">
+                      <i class="bi bi-tag me-1"></i>{{ motion.type }}
+                    </span>
+                    <span class="badge text-bg-{{ status_cls }}">
+                      <i></i>{{ motion.status }}
+                    </span>
+                  </div>
+                </div>
+                <div class="text-muted small">
+                  <i class="bi bi-file-earmark-text me-1"></i>
+                  Motion
+                </div>
+              </div>
+
+              {% if item.is_preference %}
+                {% set pref = item.pref %}
+                <hr class="my-3">
+
+                <div class="row g-2 mb-3">
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Ballots</div>
+                      <div class="fw-semibold">{{ pref.total_ballots }}</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Winners</div>
+                      <div class="fw-semibold">{{ pref.num_winners }}</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Rounds</div>
+                      <div class="fw-semibold">{{ pref.seats|length }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="text-muted small mb-1">Winners (in order)</div>
+                  <div>
+                    {% if pref.winners %}
+                      {% for w in pref.winners %}
+                        <span class="badge text-bg-success me-1 mb-1">
+                          <i class="bi bi-trophy me-1"></i>{{ w.text }}
+                        </span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">No winners determined.</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="accordion results-accordion" id="mobileSeatsAccordion{{ motion.id }}">
+                  {% for seat in pref.seats %}
+                    <div class="accordion-item border rounded-3 mb-2 overflow-hidden">
+                      <h2 class="accordion-header" id="mobileSeatHeading{{ motion.id }}_{{ seat.seat_number }}">
+                        <button
+                          class="accordion-button collapsed"
+                          type="button"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#mobileSeatCollapse{{ motion.id }}_{{ seat.seat_number }}"
+                          aria-expanded="false"
+                          aria-controls="mobileSeatCollapse{{ motion.id }}_{{ seat.seat_number }}"
+                        >
+                          <div class="d-flex align-items-center justify-content-between w-100 pe-2">
+                            <div class="fw-semibold">
+                              Seat {{ seat.seat_number }}
+                            </div>
+                            <span class="badge text-bg-light border">
+                              {{ seat.rounds|length }} rounds
+                            </span>
+                          </div>
+                        </button>
+                      </h2>
+
+                      <div
+                        id="mobileSeatCollapse{{ motion.id }}_{{ seat.seat_number }}"
+                        class="accordion-collapse collapse"
+                        aria-labelledby="mobileSeatHeading{{ motion.id }}_{{ seat.seat_number }}"
+                        data-bs-parent="#mobileSeatsAccordion{{ motion.id }}"
+                      >
+                        <div class="accordion-body">
+                          <div class="mb-2">
+                            <span class="badge text-bg-success">
+                              <i class="bi bi-check2-circle me-1"></i>{{ seat.winner.text }}
+                            </span>
+                          </div>
+
+                          <div class="vstack gap-2">
+                            {% for round in seat.rounds %}
+                              <div class="border rounded-3 p-2">
+                                <div class="text-muted small mb-1">Round #{{ round.round_number }}</div>
+                                {% for row in round.counts %}
+                                  <div class="d-flex justify-content-between align-items-center small">
+                                    <span class="fw-semibold">{{ row.option.text }}</span>
+                                    <span>{{ row.count }}</span>
+                                  </div>
+                                {% endfor %}
+                              </div>
+                            {% endfor %}
+                          </div>
+
+                          {% if seat.round_logs %}
+                            <div class="mt-3">
+                              <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-journal-text text-muted"></i>
+                                <h4 class="h6 mb-0">Round-by-round summary</h4>
+                              </div>
+
+                              <ol class="mb-0">
+                                {% for round_log in seat.round_logs %}
+                                  <li class="mb-2">
+                                    <div class="p-2 rounded-3 bg-light border">
+                                      {% for line in round_log %}
+                                        <div class="small">{{ line }}</div>
+                                      {% endfor %}
+                                    </div>
+                                  </li>
+                                {% endfor %}
+                              </ol>
+                            </div>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <hr class="my-3">
+                <div class="text-muted small">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Results rendering for this motion type will appear here.
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="d-md-none card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4 text-center">
+          <div class="text-muted mb-2">
+            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+          </div>
+          <h2 class="h6 mb-1">No motions yet</h2>
+          <p class="text-muted mb-0">There are no motions configured for this meeting.</p>
+        </div>
+      </div>
+    {% endif %}
+
     <!-- Top bar -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div class="d-none d-md-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
       <a href="{{ url_for('meeting_detail', meeting_id=meeting.id) }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Back to meeting
       </a>
     </div>
 
     <!-- Header -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="d-none d-md-block card border-0 shadow-sm mb-4">
       <div class="card-body p-3 p-md-4">
         <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
           <div>
@@ -26,7 +223,7 @@
     </div>
 
     {% if results %}
-      <div class="vstack gap-4">
+      <div class="d-none d-md-flex vstack gap-4">
 
         {% for item in results %}
           {% set motion = item.motion %}
@@ -56,7 +253,7 @@
                       <i class="bi bi-tag me-1"></i>{{ motion.type }}
                     </span>
                     <span class="badge text-bg-{{ status_cls }}">
-                      <i class="bi bi-activity me-1"></i>{{ motion.status }}
+                      <i></i>{{ motion.status }}
                     </span>
                   </div>
                 </div>
@@ -105,16 +302,16 @@
                 </div>
 
                 <!-- Seats -->
-                <div class="accordion" id="seatsAccordion{{ motion.id }}">
+                <div class="accordion results-accordion" id="seatsAccordion{{ motion.id }}">
                   {% for seat in pref.seats %}
                     <div class="accordion-item border rounded-3 mb-2 overflow-hidden">
                       <h2 class="accordion-header" id="seatHeading{{ motion.id }}_{{ seat.seat_number }}">
                         <button
-                          class="accordion-button {% if not loop.first %}collapsed{% endif %}"
+                          class="accordion-button collapsed"
                           type="button"
                           data-bs-toggle="collapse"
                           data-bs-target="#seatCollapse{{ motion.id }}_{{ seat.seat_number }}"
-                          aria-expanded="{% if loop.first %}true{% else %}false{% endif %}"
+                          aria-expanded="false"
                           aria-controls="seatCollapse{{ motion.id }}_{{ seat.seat_number }}"
                         >
                           <div class="d-flex align-items-center justify-content-between w-100 pe-2">
@@ -136,7 +333,7 @@
 
                       <div
                         id="seatCollapse{{ motion.id }}_{{ seat.seat_number }}"
-                        class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+                        class="accordion-collapse collapse"
                         aria-labelledby="seatHeading{{ motion.id }}_{{ seat.seat_number }}"
                         data-bs-parent="#seatsAccordion{{ motion.id }}"
                       >
@@ -213,7 +410,7 @@
       </div>
 
     {% else %}
-      <div class="card border-0 shadow-sm">
+      <div class="d-none d-md-block card border-0 shadow-sm">
         <div class="card-body p-4 text-center">
           <div class="text-muted mb-2">
             <i class="bi bi-inbox" style="font-size: 2rem;"></i>
@@ -224,4 +421,13 @@
       </div>
     {% endif %}
   </div>
+
+  <style>
+    .results-accordion .accordion-button {
+      padding: 0.6rem 0.9rem;
+    }
+    .results-accordion .accordion-body {
+      padding: 0.75rem 0.9rem;
+    }
+  </style>
 {% endblock %}
