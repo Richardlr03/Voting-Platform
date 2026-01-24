@@ -9,7 +9,6 @@
         <i class="bi bi-arrow-left me-1"></i> Back to Meeting
       </a>
     </div>
-
     <div class="d-md-none card border-0 shadow-sm rounded-4 mb-3">
       <div class="card-body p-3">
         <div class="d-flex align-items-start justify-content-between gap-2">
@@ -63,7 +62,7 @@
                         <i class="bi bi-tag me-1"></i>{{ motion.type }}
                       </span>
                       <span class="badge text-bg-{{ status_cls }}">
-                        <i class="bi bi-activity me-1"></i>{{ motion.status }}
+                        <i></i>{{ motion.status }}
                       </span>
                     </div>
                   </div>
@@ -98,7 +97,9 @@
                           <div class="fw-semibold">{{ row.voter.name }}</div>
                           <span class="badge text-bg-light border font-monospace">{{ row.voter.code }}</span>
                         </div>
-                        <div class="text-muted small mt-1">{{ row.choice_display }}</div>
+                        <div class="text-muted small mt-1">
+                          {{ row.choice_display|replace(', ', '<br>')|safe }}
+                        </div>
                       </div>
                     {% endfor %}
                   </div>
