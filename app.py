@@ -1034,6 +1034,8 @@ def delete_motion(motion_id):
     motion = Motion.query.get_or_404(motion_id)
     
     try:
+        Vote.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
+        Option.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
         db.session.delete(motion)
         db.session.commit()
         return jsonify({"success": True}), 200
