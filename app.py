@@ -602,7 +602,6 @@ def login():
             error = "Invalid username or password."
         else:
             login_user(user, remember=remember)
-            flash(f"Welcome back, {user.username}!", "success")
             return redirect(url_for("admin_meetings"))
 
     return render_template("login_signup/login.html", error=error)
@@ -671,7 +670,6 @@ def reset_password(token):
 @login_required
 def logout():
     logout_user() # Clears the session cookie
-    flash("You have been logged out.", "info")
     return redirect(url_for("login"))
 
 @app.route("/join", methods=["GET", "POST"])
