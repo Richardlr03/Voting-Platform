@@ -627,7 +627,7 @@ def forgot_password():
         else:
             app.logger.warning("Password reset requested for unknown email: %s", email)
 
-        flash("If an account exists for that email, a reset link has been sent.", "success")
+        flash("A reset link has been sent.", "success")
         return redirect(url_for("login"))
 
     return render_template("login_signup/forgot_password.html")
