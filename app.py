@@ -870,9 +870,11 @@ def create_motion(meeting_id):
                 },
             }
 
+        flash("Motion added successfully.", "success")
         return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
     # GET
+    flash("Motion added successfully.", "success")
     return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
 @app.route("/admin/meetings/<int:meeting_id>/voters/new", methods=["GET", "POST"])
@@ -912,9 +914,11 @@ def create_voter(meeting_id):
                 },
             }
 
+        flash("Voter added successfully.", "success")
         return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
     # GET -> show form
+    flash("Voter added successfully.", "success")
     return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
 @app.route("/admin/meetings/<int:meeting_id>/results")
@@ -1042,6 +1046,7 @@ def update_user(voter_id):
     try:
         voter.name = new_name
         db.session.commit()
+        flash("Voter updated successfully.", "success")
         return jsonify({"success": True}), 200
     except Exception as e:
         db.session.rollback()
@@ -1056,6 +1061,7 @@ def delete_user(voter_id):
     try:
         db.session.delete(voter)
         db.session.commit()
+        flash("Voter deleted successfully.", "success")
         return jsonify({"success": True}), 200
     except Exception as e:
         db.session.rollback()
@@ -1095,6 +1101,7 @@ def update_motion(motion_id):
     
     try:
         db.session.commit()
+        flash("Motion updated successfully.", "success")
         return jsonify({"success": True}), 200
     except Exception as e:
         db.session.rollback()
@@ -1111,6 +1118,7 @@ def delete_motion(motion_id):
         Option.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
         db.session.delete(motion)
         db.session.commit()
+        flash("Motion deleted successfully.", "success")
         return jsonify({"success": True}), 200
     except Exception as e:
         db.session.rollback()

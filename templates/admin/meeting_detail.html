@@ -791,6 +791,12 @@
           }
 
           motionModal.hide();
+          try {
+            sessionStorage.setItem("vpFlash", JSON.stringify({
+              type: "success",
+              message: "Motion added successfully."
+            }));
+          } catch (e) { /* ignore */ }
           window.location.reload();
         } catch (err) {
           motionError.textContent = err.message;
@@ -844,6 +850,12 @@
           }
 
           voterModal.hide();
+          try {
+            sessionStorage.setItem("vpFlash", JSON.stringify({
+              type: "success",
+              message: "Voter added successfully."
+            }));
+          } catch (e) { /* ignore */ }
           window.location.reload();
         } catch (err) {
           voterError.textContent = err.message;

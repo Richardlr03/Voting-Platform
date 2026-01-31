@@ -251,6 +251,48 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
+      function showFlashModal(type, message, onClose) {
+        const existing = document.getElementById("flashBackdrop");
+        if (existing) existing.remove();
+
+        const bs = type || "info";
+        const backdrop = document.createElement("div");
+        backdrop.className = "vp-flash-backdrop vp-flash-hidden";
+        backdrop.id = "flashBackdrop";
+        backdrop.setAttribute("role", "dialog");
+        backdrop.setAttribute("aria-modal", "true");
+
+        const iconHtml = bs === "success"
+          ? '<i class="bi bi-check-circle-fill"></i>'
+          : bs === "danger"
+            ? '<i class="bi bi-x-circle-fill"></i>'
+            : bs === "warning"
+              ? '<i class="bi bi-exclamation-triangle-fill"></i>'
+              : '<i class="bi bi-info-circle-fill"></i>';
+
+        backdrop.innerHTML = `
+          <div class="vp-flash-modal">
+            <div class="vp-flash-icon vp-${bs}">${iconHtml}</div>
+            <div class="vp-flash-title text-${bs}">${bs.toUpperCase()}</div>
+            <div class="vp-flash-message">${message || ""}</div>
+            <button class="btn btn-primary px-4" id="flashOkBtn">OK</button>
+          </div>
+        `;
+        document.body.appendChild(backdrop);
+
+        const okBtn = backdrop.querySelector("#flashOkBtn");
+        if (okBtn) {
+          okBtn.addEventListener("click", () => {
+            backdrop.remove();
+            if (typeof onClose === "function") onClose();
+          });
+        }
+
+        requestAnimationFrame(() => {
+          backdrop.classList.remove("vp-flash-hidden");
+        });
+      }
+
       const flashOkBtn = document.getElementById("flashOkBtn");
       if (flashOkBtn) {
         flashOkBtn.addEventListener("click", () => {
@@ -264,6 +306,15 @@
           flashBackdrop.classList.remove("vp-flash-hidden");
         });
       }
+
+      try {
+        const queued = sessionStorage.getItem("vpFlash");
+        if (queued) {
+          sessionStorage.removeItem("vpFlash");
+          const data = JSON.parse(queued);
+          showFlashModal(data.type || "info", data.message || "");
+        }
+      } catch (e) { /* ignore */ }
     </script>
   </body>
 </html>
