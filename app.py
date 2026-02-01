@@ -34,6 +34,12 @@ app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD", "")
 app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", app.config["MAIL_USERNAME"])
 
 db = SQLAlchemy(app)
+# Enable SSL for Aiven (TLS required)
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "connect_args": {
+        "ssl": {"ca": os.getenv("MYSQL_SSL_CA", "")} if os.getenv("MYSQL_SSL_CA") else {}
+    }
+}
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -544,6 +550,9 @@ def tally_preference_sequential_irv(motion):
         "num_winners": num_seats,
         "total_ballots": len(ballots),
     }
+
+with app.app_context():
+    db.create_all()
 
 # --- Routes ---
 
