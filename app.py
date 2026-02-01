@@ -20,9 +20,12 @@ app = Flask(__name__)
 # SQLite DB file in the project folder
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(BASE_DIR, "app.db")
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://TAMLZ03:20050329@localhost:3306/voting?charset=utf8mb4"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SECRET_KEY"] = "dev-secret-key-change-later"  # needed later for sessions
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "DATABASE_URL",
+    "mysql+pymysql://root:password@127.0.0.1:3306/voting?charset=utf8mb4"
+)
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-only-change-me")
 app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
 app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", "587"))
 app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
