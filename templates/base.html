@@ -2,8 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>{% block title %}Voting Platform{% endblock %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Votora — Secure Online Voting{% endblock %}</title>
+
+    <meta name="description" content="Votora is a secure online voting platform for meetings and groups. Create motions, invite voters, and publish results in real time.">
+
+    <!-- Open Graph / Social preview -->
+    <meta property="og:title" content="Votora — Secure Online Voting">
+    <meta property="og:description" content="Make group decisions simple and fair with Votora.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url_root }}">
+    <meta property="og:image" content="{{ url_for('static', filename='Votora_Favicon.png', _external=True) }}">
+
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='Votora_Favicon.png') }}">
 
     <!-- Bootstrap CSS via CDN -->
     <link
