@@ -187,6 +187,12 @@
 
                       <div class="d-flex gap-2 mt-1">
                         <button type="button"
+                                class="btn btn-sm btn-outline-secondary copy-voter-link-btn"
+                                data-voter-link="{{ url_for('voter_dashboard', code=voter.code, _external=True) }}"
+                                title="Copy voter link">
+                          <i class="bi bi-clipboard"></i>
+                        </button>
+                        <button type="button"
                                 class="btn btn-sm btn-outline-secondary edit-voter-btn"
                                 data-voter-id="{{ voter.id }}"
                                 data-voter-name="{{ voter.name }}"
@@ -400,6 +406,12 @@
                       </div>
 
                       <div class="d-flex gap-2">
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-secondary copy-voter-link-btn" 
+                                data-voter-link="{{ url_for('voter_dashboard', code=voter.code, _external=True) }}"
+                                title="Copy voter link">
+                          <i class="bi bi-clipboard"></i>
+                        </button>
                         <button type="button" 
                                 class="btn btn-sm btn-outline-secondary edit-voter-btn" 
                                 data-voter-id="{{ voter.id }}" 
@@ -791,6 +803,12 @@
           }
 
           motionModal.hide();
+          try {
+            sessionStorage.setItem("vpFlash", JSON.stringify({
+              type: "success",
+              message: "Motion added successfully."
+            }));
+          } catch (e) { /* ignore */ }
           window.location.reload();
         } catch (err) {
           motionError.textContent = err.message;
@@ -844,6 +862,12 @@
           }
 
           voterModal.hide();
+          try {
+            sessionStorage.setItem("vpFlash", JSON.stringify({
+              type: "success",
+              message: "Voter added successfully."
+            }));
+          } catch (e) { /* ignore */ }
           window.location.reload();
         } catch (err) {
           voterError.textContent = err.message;
@@ -897,6 +921,23 @@
           currentVoterId = btn.dataset.voterId;
           document.getElementById('deleteVoterName').textContent = btn.dataset.voterName;
           deleteVoterModal.show();
+        });
+      });
+
+      // Copy voter link
+      document.querySelectorAll('.copy-voter-link-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const link = btn.dataset.voterLink;
+          try {
+            await navigator.clipboard.writeText(link);
+            if (typeof showFlashModal === "function") {
+              showFlashModal("success", "Voter link copied.");
+            }
+          } catch (err) {
+            if (typeof showFlashModal === "function") {
+              showFlashModal("danger", "Failed to copy link.");
+            }
+          }
         });
       });
 

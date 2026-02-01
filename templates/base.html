@@ -83,6 +83,61 @@
       .vp-footer{
         color: rgba(15, 23, 42, .65);
       }
+
+      .vp-flash-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          padding: 16px;
+          opacity: 1;
+          transition: opacity 0.2s ease;
+      }
+      .vp-flash-backdrop.vp-flash-hidden {
+          opacity: 0;
+      }
+      .vp-flash-modal {
+          background: #ffffff;
+          border-radius: 16px;
+          width: min(420px, 100%);
+          padding: 24px;
+          box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+          text-align: center;
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          transform: scale(0.98);
+          transition: transform 0.2s ease;
+      }
+      .vp-flash-backdrop:not(.vp-flash-hidden) .vp-flash-modal {
+          transform: scale(1);
+      }
+      .vp-flash-icon {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 12px;
+          font-size: 1.8rem;
+          background: rgba(13, 110, 253, 0.1);
+          color: #0d6efd;
+      }
+      .vp-flash-icon.vp-success { background: rgba(25, 135, 84, 0.12); color: #198754; }
+      .vp-flash-icon.vp-danger { background: rgba(220, 53, 69, 0.12); color: #dc3545; }
+      .vp-flash-icon.vp-warning { background: rgba(255, 193, 7, 0.18); color: #ffc107; }
+      .vp-flash-icon.vp-info { background: rgba(13, 110, 253, 0.12); color: #0d6efd; }
+      .vp-flash-title {
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          font-size: 0.85rem;
+          margin-bottom: 6px;
+      }
+      .vp-flash-message {
+          color: rgba(15, 23, 42, 0.75);
+          margin-bottom: 16px;
+      }
     </style>
   </head>
 
@@ -141,20 +196,27 @@
       </div>
     </nav>
 
-    <!-- Flash messages -->
+    <!-- Flash modal -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="container mt-3">
-          {% for category, message in messages %}
-            {% if category not in ['reset_error', 'login_error', 'join_error'] %}
-            {% set bs =
-              'success' if category == 'success'
-              else 'danger' if category == 'error'
-              else 'warning' if category == 'warning'
-              else 'info'
-            %}
-            <div class="alert alert-{{ bs }} alert-dismissible fade show d-flex align-items-center gap-2 vp-surface py-3" role="alert">
-              <div>
+        {% set visible = [] %}
+        {% for category, message in messages %}
+          {% if category not in ['reset_error', 'login_error', 'join_error'] %}
+            {% set _ = visible.append((category, message)) %}
+          {% endif %}
+        {% endfor %}
+        {% if visible|length > 0 %}
+          {% set category = visible[0][0] %}
+          {% set message = visible[0][1] %}
+          {% set bs =
+            'success' if category == 'success'
+            else 'danger' if category == 'error'
+            else 'warning' if category == 'warning'
+            else 'info'
+          %}
+          <div class="vp-flash-backdrop vp-flash-hidden" id="flashBackdrop" role="dialog" aria-modal="true">
+            <div class="vp-flash-modal">
+              <div class="vp-flash-icon vp-{{ bs }}">
                 {% if bs == 'success' %}
                   <i class="bi bi-check-circle-fill"></i>
                 {% elif bs == 'danger' %}
@@ -165,14 +227,12 @@
                   <i class="bi bi-info-circle-fill"></i>
                 {% endif %}
               </div>
-              <div class="flex-grow-1">
-                {{ message }}
-              </div>
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              <div class="vp-flash-title text-{{ bs }}">{{ bs|upper }}</div>
+              <div class="vp-flash-message">{{ message }}</div>
+              <button class="btn btn-primary px-4" id="flashOkBtn">OK</button>
             </div>
-            {% endif %}
-          {% endfor %}
-        </div>
+          </div>
+        {% endif %}
       {% endif %}
     {% endwith %}
 
@@ -190,6 +250,72 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+      function showFlashModal(type, message, onClose) {
+        const existing = document.getElementById("flashBackdrop");
+        if (existing) existing.remove();
+
+        const bs = type || "info";
+        const backdrop = document.createElement("div");
+        backdrop.className = "vp-flash-backdrop vp-flash-hidden";
+        backdrop.id = "flashBackdrop";
+        backdrop.setAttribute("role", "dialog");
+        backdrop.setAttribute("aria-modal", "true");
+
+        const iconHtml = bs === "success"
+          ? '<i class="bi bi-check-circle-fill"></i>'
+          : bs === "danger"
+            ? '<i class="bi bi-x-circle-fill"></i>'
+            : bs === "warning"
+              ? '<i class="bi bi-exclamation-triangle-fill"></i>'
+              : '<i class="bi bi-info-circle-fill"></i>';
+
+        backdrop.innerHTML = `
+          <div class="vp-flash-modal">
+            <div class="vp-flash-icon vp-${bs}">${iconHtml}</div>
+            <div class="vp-flash-title text-${bs}">${bs.toUpperCase()}</div>
+            <div class="vp-flash-message">${message || ""}</div>
+            <button class="btn btn-primary px-4" id="flashOkBtn">OK</button>
+          </div>
+        `;
+        document.body.appendChild(backdrop);
+
+        const okBtn = backdrop.querySelector("#flashOkBtn");
+        if (okBtn) {
+          okBtn.addEventListener("click", () => {
+            backdrop.remove();
+            if (typeof onClose === "function") onClose();
+          });
+        }
+
+        requestAnimationFrame(() => {
+          backdrop.classList.remove("vp-flash-hidden");
+        });
+      }
+
+      const flashOkBtn = document.getElementById("flashOkBtn");
+      if (flashOkBtn) {
+        flashOkBtn.addEventListener("click", () => {
+          const backdrop = document.getElementById("flashBackdrop");
+          if (backdrop) backdrop.remove();
+        });
+      }
+      const flashBackdrop = document.getElementById("flashBackdrop");
+      if (flashBackdrop) {
+        requestAnimationFrame(() => {
+          flashBackdrop.classList.remove("vp-flash-hidden");
+        });
+      }
+
+      try {
+        const queued = sessionStorage.getItem("vpFlash");
+        if (queued) {
+          sessionStorage.removeItem("vpFlash");
+          const data = JSON.parse(queued);
+          showFlashModal(data.type || "info", data.message || "");
+        }
+      } catch (e) { /* ignore */ }
+    </script>
   </body>
 </html>
 
@@ -210,4 +336,5 @@
   .vp-footer {
       margin-top: auto;
   }
+
 </style>
