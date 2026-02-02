@@ -6,6 +6,10 @@ from app.models import Meeting, Motion, Vote, Voter
 
 
 def register_public_routes(app):
+    @app.route("/favicon.ico")
+    def favicon():
+        return redirect(url_for("static", filename="Votora_Favicon.png"), code=302)
+
     @app.route("/")
     def index():
         return render_template("index.html")
