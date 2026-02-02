@@ -2,13 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>{% block title %}Votora — Secure Online Voting{% endblock %}</title>
+    <title>{% block title %}Votora &mdash; Secure Online Voting{% endblock %}</title>
 
-    <meta name="description" content="Votora is a secure online voting platform for meetings and groups. Create motions, invite voters, and publish results in real time.">
+    <meta name="description" content="Votora is a secure, modern voting platform for teams and communities. Launch ballots, invite voters, and publish results with confidence.">
 
     <!-- Open Graph / Social preview -->
-    <meta property="og:title" content="Votora — Secure Online Voting">
-    <meta property="og:description" content="Make group decisions simple and fair with Votora.">
+    <meta property="og:title" content="Votora &mdash; Secure Online Voting">
+    <meta property="og:description" content="Make group decisions simple, fair, and fast with Votora.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url_root }}">
     <meta property="og:image" content="{{ url_for('static', filename='Votora_Favicon.png', _external=True) }}">
@@ -17,6 +17,11 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='Votora_Favicon.png') }}">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Bootstrap CSS via CDN -->
     <link
@@ -36,60 +41,120 @@
     <!-- Small global polish -->
     <style>
       :root{
-        --vp-surface: rgba(255,255,255,.85);
-        --vp-border: rgba(15, 23, 42, .10);
+        --vp-ink: #0b0f1a;
+        --vp-slate: #1f2a44;
+        --vp-mist: rgba(255, 255, 255, 0.86);
+        --vp-border: rgba(20, 26, 40, 0.12);
+        --vp-accent: #ff6a3d;
+        --vp-accent-2: #2bb3a0;
+        --vp-glow: rgba(255, 106, 61, 0.35);
       }
 
       body{
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--vp-ink);
         background:
-          radial-gradient(1000px 400px at 10% 0%, rgba(13,110,253,.10), transparent 50%),
-          radial-gradient(900px 380px at 90% 10%, rgba(32,201,151,.10), transparent 55%),
-          #f6f7fb;
+          radial-gradient(1000px 420px at 12% 6%, rgba(255, 106, 61, 0.12), transparent 55%),
+          radial-gradient(900px 380px at 86% 12%, rgba(43, 179, 160, 0.16), transparent 52%),
+          linear-gradient(180deg, #f9f7f3 0%, #f4f6fb 55%, #eef2f7 100%);
+        position: relative;
+        overflow-x: hidden;
       }
 
-      .container{ max-width: 1100px; }
+      body::before,
+      body::after{
+        content: "";
+        position: fixed;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        z-index: -1;
+        opacity: 0.35;
+        animation: vp-drift 18s ease-in-out infinite;
+      }
+      body::before{
+        left: -160px;
+        top: 10%;
+        background: radial-gradient(circle, rgba(255, 106, 61, 0.35), transparent 60%);
+      }
+      body::after{
+        right: -160px;
+        bottom: 5%;
+        background: radial-gradient(circle, rgba(43, 179, 160, 0.35), transparent 62%);
+        animation-delay: -6s;
+      }
+
+      @keyframes vp-drift{
+        0%, 100%{ transform: translate3d(0, 0, 0) scale(1); }
+        50%{ transform: translate3d(18px, -18px, 0) scale(1.04); }
+      }
+
+      .container{ max-width: 1120px; }
 
       /* Navbar */
       .vp-navbar{
-        background: linear-gradient(135deg, #0b1220 0%, #111827 60%, #0b1220 100%);
+        background: linear-gradient(125deg, #111827 0%, #0b1220 55%, #121a2b 100%);
         border-bottom: 1px solid rgba(255,255,255,.08);
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
       }
       .vp-brand-badge{
-        width: 34px; height: 34px;
-        border-radius: 10px;
+        width: 36px; height: 36px;
+        border-radius: 12px;
         display: grid; place-items: center;
-        background: rgba(13,110,253,.18);
-        border: 1px solid rgba(13,110,253,.35);
+        background: rgba(255, 106, 61, 0.18);
+        border: 1px solid rgba(255, 106, 61, 0.45);
+        box-shadow: 0 8px 20px rgba(255, 106, 61, 0.2);
+      }
+      .vp-brand-text{
+        font-family: "Fraunces", "Georgia", serif;
+        letter-spacing: 0.02em;
+      }
+      .vp-brand-tag{
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,.6);
+        margin-top: -2px;
       }
       .navbar .nav-link{
         color: rgba(255,255,255,.78);
-        border-radius: 10px;
-        padding: .45rem .75rem;
+        border-radius: 12px;
+        padding: .45rem .8rem;
       }
       .navbar .nav-link:hover{ color: #fff; background: rgba(255,255,255,.08); }
       .navbar .nav-link.active{
         color: #fff;
-        background: rgba(13,110,253,.22);
-        border: 1px solid rgba(13,110,253,.35);
+        background: rgba(255, 106, 61, 0.22);
+        border: 1px solid rgba(255, 106, 61, 0.35);
       }
 
       /* Page surface wrapper */
       .vp-surface{
-        background: var(--vp-surface);
+        background: var(--vp-mist);
         border: 1px solid var(--vp-border);
-        border-radius: 18px;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+        border-radius: 22px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, .12);
       }
 
       /* Table hover */
       .table tbody tr:hover{
-        background: rgba(13,110,253,.05);
+        background: rgba(255, 106, 61, 0.08);
       }
 
       /* Better focus */
       .btn:focus, .form-control:focus, .form-select:focus{
-        box-shadow: 0 0 0 .25rem rgba(13,110,253,.20) !important;
+        box-shadow: 0 0 0 .25rem rgba(255, 106, 61, 0.22) !important;
+      }
+
+      .btn-primary{
+        background: linear-gradient(135deg, #ff6a3d 0%, #ff8a5b 50%, #ff6a3d 100%);
+        border: none;
+        box-shadow: 0 10px 25px rgba(255, 106, 61, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .btn-primary:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(255, 106, 61, 0.3);
       }
 
       /* Footer */
@@ -134,13 +199,13 @@
           place-items: center;
           margin: 0 auto 12px;
           font-size: 1.8rem;
-          background: rgba(13, 110, 253, 0.1);
-          color: #0d6efd;
+          background: rgba(255, 106, 61, 0.12);
+          color: #ff6a3d;
       }
-      .vp-flash-icon.vp-success { background: rgba(25, 135, 84, 0.12); color: #198754; }
+      .vp-flash-icon.vp-success { background: rgba(43, 179, 160, 0.15); color: #2bb3a0; }
       .vp-flash-icon.vp-danger { background: rgba(220, 53, 69, 0.12); color: #dc3545; }
       .vp-flash-icon.vp-warning { background: rgba(255, 193, 7, 0.18); color: #ffc107; }
-      .vp-flash-icon.vp-info { background: rgba(13, 110, 253, 0.12); color: #0d6efd; }
+      .vp-flash-icon.vp-info { background: rgba(255, 106, 61, 0.12); color: #ff6a3d; }
       .vp-flash-title {
           font-weight: 700;
           letter-spacing: 0.08em;
@@ -160,9 +225,12 @@
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2 text-white fw-bold" href="{{ url_for('index') }}">
           <div class="vp-brand-badge">
-            <i class="bi bi-shield-check text-primary"></i>
+            <i class="bi bi-fingerprint text-white"></i>
           </div>
-          Voting Platform
+          <div class="d-flex flex-column lh-1">
+            <span class="vp-brand-text">Votora</span>
+            <span class="vp-brand-tag">vote with clarity</span>
+          </div>
         </a>
 
         <a href="{{ url_for('voting_systems') }}" class="nav-link d-none d-sm-inline-block ms-2 text-white-50 small fw-medium" style="font-size: 0.85rem; opacity: 0.8;">
@@ -256,7 +324,7 @@
     </main>
 
     <footer class="vp-footer text-center py-4"> <small>
-        © 2026 Voting Platform · Built by Richard Tam
+        &copy; 2026 Votora &middot; Built by Richard Tam
       </small>
     </footer>
 

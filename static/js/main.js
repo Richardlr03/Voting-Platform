@@ -1,5 +1,5 @@
-// Custom JS for the AGM Voting Platform
-console.log("AGM Voting Platform loaded");
+// Custom JS for Votora
+console.log("Votora loaded");
 
 // Auto-dismiss Bootstrap alerts after 3 seconds
 document.addEventListener('DOMContentLoaded', function () {

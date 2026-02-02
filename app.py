@@ -151,11 +151,11 @@ def send_reset_email(to_email, reset_url):
         raise RuntimeError("Email credentials are not configured.")
 
     msg = EmailMessage()
-    msg["Subject"] = "Reset your Voting Platform password"
+    msg["Subject"] = "Reset your Votora password"
     msg["From"] = app.config["MAIL_DEFAULT_SENDER"]
     msg["To"] = to_email
     msg.set_content(
-        "You requested a password reset for Voting Platform.\n\n"
+        "You requested a password reset for Votora.\n\n"
         f"Reset your password here: {reset_url}\n\n"
         "This link will expire in 30 minutes. If you did not request this, ignore this email."
     )
