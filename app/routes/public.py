@@ -1,4 +1,4 @@
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, render_template, request, send_from_directory, session, url_for
 from sqlalchemy import and_
 
 from app.extensions import db
@@ -8,7 +8,11 @@ from app.models import Meeting, Motion, Vote, Voter
 def register_public_routes(app):
     @app.route("/favicon.ico")
     def favicon():
-        return redirect(url_for("static", filename="Votora_Favicon.png"), code=302)
+        return send_from_directory(
+            app.static_folder,
+            "Votora_Favicon.png",
+            mimetype="image/png",
+        )
 
     @app.route("/")
     def index():
