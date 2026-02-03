@@ -16,6 +16,10 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = set(inspector.get_table_names())
+
     op.create_table('candidate_votes',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('voter_id', sa.Integer(), nullable=False),
@@ -47,40 +51,41 @@ def upgrade():
     sa.ForeignKeyConstraint(['voter_id'], ['voters.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.execute(
-        sa.text(
-            """
-            INSERT INTO yes_no_votes (voter_id, motion_id, option_id)
-            SELECT v.voter_id, v.motion_id, v.option_id
-            FROM votes v
-            JOIN motions m ON m.id = v.motion_id
-            WHERE m.type = 'YES_NO'
-            """
+    if "votes" in existing_tables:
+        op.execute(
+            sa.text(
+                """
+                INSERT INTO yes_no_votes (voter_id, motion_id, option_id)
+                SELECT v.voter_id, v.motion_id, v.option_id
+                FROM votes v
+                JOIN motions m ON m.id = v.motion_id
+                WHERE m.type = 'YES_NO'
+                """
+            )
         )
-    )
-    op.execute(
-        sa.text(
-            """
-            INSERT INTO candidate_votes (voter_id, motion_id, option_id)
-            SELECT v.voter_id, v.motion_id, v.option_id
-            FROM votes v
-            JOIN motions m ON m.id = v.motion_id
-            WHERE m.type = 'CANDIDATE'
-            """
+        op.execute(
+            sa.text(
+                """
+                INSERT INTO candidate_votes (voter_id, motion_id, option_id)
+                SELECT v.voter_id, v.motion_id, v.option_id
+                FROM votes v
+                JOIN motions m ON m.id = v.motion_id
+                WHERE m.type = 'CANDIDATE'
+                """
+            )
         )
-    )
-    op.execute(
-        sa.text(
-            """
-            INSERT INTO preference_votes (voter_id, motion_id, option_id, preference_rank)
-            SELECT v.voter_id, v.motion_id, v.option_id, v.preference_rank
-            FROM votes v
-            JOIN motions m ON m.id = v.motion_id
-            WHERE m.type = 'PREFERENCE' AND v.preference_rank IS NOT NULL
-            """
+        op.execute(
+            sa.text(
+                """
+                INSERT INTO preference_votes (voter_id, motion_id, option_id, preference_rank)
+                SELECT v.voter_id, v.motion_id, v.option_id, v.preference_rank
+                FROM votes v
+                JOIN motions m ON m.id = v.motion_id
+                WHERE m.type = 'PREFERENCE' AND v.preference_rank IS NOT NULL
+                """
+            )
         )
-    )
-    op.drop_table('votes')
+        op.drop_table('votes')
 
 
 def downgrade():
