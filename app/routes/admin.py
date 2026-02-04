@@ -2,9 +2,17 @@ from flask import abort, flash, jsonify, redirect, render_template, request, url
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.models import Meeting, Motion, Option, Vote, Voter
+from app.models import (
+    CandidateVote,
+    Meeting,
+    Motion,
+    Option,
+    PreferenceVote,
+    Voter,
+    YesNoVote,
+)
 from app.services.security import generate_voter_code
-from app.services.voting import tally_preference_sequential_irv
+from app.services.voting import tally_candidate_election, tally_preference_sequential_irv
 
 
 def register_admin_routes(app):
@@ -63,7 +71,13 @@ def register_admin_routes(app):
         voter_ids = [voter.id for voter in meeting.voters]
 
         if motion_ids:
-            Vote.query.filter(Vote.motion_id.in_(motion_ids)).delete(
+            YesNoVote.query.filter(YesNoVote.motion_id.in_(motion_ids)).delete(
+                synchronize_session=False
+            )
+            CandidateVote.query.filter(CandidateVote.motion_id.in_(motion_ids)).delete(
+                synchronize_session=False
+            )
+            PreferenceVote.query.filter(PreferenceVote.motion_id.in_(motion_ids)).delete(
                 synchronize_session=False
             )
             Option.query.filter(Option.motion_id.in_(motion_ids)).delete(
@@ -74,7 +88,13 @@ def register_admin_routes(app):
             )
 
         if voter_ids:
-            Vote.query.filter(Vote.voter_id.in_(voter_ids)).delete(
+            YesNoVote.query.filter(YesNoVote.voter_id.in_(voter_ids)).delete(
+                synchronize_session=False
+            )
+            CandidateVote.query.filter(CandidateVote.voter_id.in_(voter_ids)).delete(
+                synchronize_session=False
+            )
+            PreferenceVote.query.filter(PreferenceVote.voter_id.in_(voter_ids)).delete(
                 synchronize_session=False
             )
             Voter.query.filter(Voter.id.in_(voter_ids)).delete(synchronize_session=False)
@@ -124,7 +144,7 @@ def register_admin_routes(app):
                 flash(error["error"], "error")
                 return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
-            if motion_type not in ("YES_NO", "CANDIDATE", "PREFERENCE"):
+            if motion_type not in ("YES_NO", "FPTP", "PREFERENCE"):
                 error = {"ok": False, "error": "Invalid motion type."}
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return error, 400
@@ -152,7 +172,7 @@ def register_admin_routes(app):
             if motion_type == "YES_NO":
                 for option_text in ("Yes", "No", "Abstain"):
                     db.session.add(Option(motion_id=motion.id, text=option_text))
-            elif motion_type in ("CANDIDATE", "PREFERENCE") and candidate_text:
+            elif motion_type in ("FPTP", "PREFERENCE") and candidate_text:
                 lines = [line.strip() for line in candidate_text.splitlines() if line.strip()]
                 for name in lines:
                     db.session.add(Option(motion_id=motion.id, text=name))
@@ -219,12 +239,29 @@ def register_admin_routes(app):
         for motion in meeting.motions:
             if motion.type == "PREFERENCE":
                 pref_result = tally_preference_sequential_irv(motion)
-                results.append({"motion": motion, "is_preference": True, "pref": pref_result})
+                results.append(
+                    {
+                        "motion": motion,
+                        "result_type": motion.type,
+                        "pref": pref_result,
+                    }
+                )
+                continue
+
+            if motion.type == "FPTP":
+                candidate_result = tally_candidate_election(motion)
+                results.append(
+                    {
+                        "motion": motion,
+                        "result_type": motion.type,
+                        "candidate": candidate_result,
+                    }
+                )
                 continue
 
             option_counts = {option.id: 0 for option in motion.options}
-            for vote in motion.votes:
-                if vote.preference_rank is None and vote.option_id in option_counts:
+            for vote in motion.yes_no_votes:
+                if vote.option_id in option_counts:
                     option_counts[vote.option_id] += 1
 
             total_votes = sum(option_counts.values())
@@ -239,7 +276,7 @@ def register_admin_routes(app):
             results.append(
                 {
                     "motion": motion,
-                    "is_preference": False,
+                    "result_type": motion.type,
                     "simple": {
                         "total_votes": total_votes,
                         "option_results": option_results,
@@ -261,7 +298,14 @@ def register_admin_routes(app):
 
         for motion in meeting.motions:
             voter_map = {}
-            for vote in motion.votes:
+            if motion.type == "PREFERENCE":
+                votes_for_motion = motion.preference_votes
+            elif motion.type == "FPTP":
+                votes_for_motion = motion.candidate_votes
+            else:
+                votes_for_motion = motion.yes_no_votes
+
+            for vote in votes_for_motion:
                 voter_map.setdefault(vote.voter_id, {"voter": vote.voter, "votes": []})
                 voter_map[vote.voter_id]["votes"].append(vote)
 
@@ -273,16 +317,11 @@ def register_admin_routes(app):
                 if motion.type == "PREFERENCE":
                     sorted_votes = sorted(
                         vote_list,
-                        key=lambda item: (
-                            item.preference_rank if item.preference_rank is not None else 9999
-                        ),
+                        key=lambda item: item.preference_rank,
                     )
                     parts = []
                     for item in sorted_votes:
-                        if item.preference_rank is not None:
-                            parts.append(f"{item.preference_rank}: {item.option.text}")
-                        else:
-                            parts.append(item.option.text)
+                        parts.append(f"{item.preference_rank}: {item.option.text}")
                     choice_display = ", ".join(parts)
                 else:
                     choice_display = ", ".join(item.option.text for item in vote_list)
@@ -362,9 +401,14 @@ def register_admin_routes(app):
                 return jsonify({"error": "Invalid status value"}), 400
             motion.status = new_status
 
-        if motion.type in ["CANDIDATE", "PREFERENCE"]:
+        if motion.type in ["FPTP", "PREFERENCE"]:
             try:
-                Vote.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
+                CandidateVote.query.filter_by(motion_id=motion.id).delete(
+                    synchronize_session=False
+                )
+                PreferenceVote.query.filter_by(motion_id=motion.id).delete(
+                    synchronize_session=False
+                )
             except Exception:
                 pass
 
@@ -388,7 +432,15 @@ def register_admin_routes(app):
         motion = Motion.query.get_or_404(motion_id)
 
         try:
-            Vote.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
+            YesNoVote.query.filter_by(motion_id=motion.id).delete(
+                synchronize_session=False
+            )
+            CandidateVote.query.filter_by(motion_id=motion.id).delete(
+                synchronize_session=False
+            )
+            PreferenceVote.query.filter_by(motion_id=motion.id).delete(
+                synchronize_session=False
+            )
             Option.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
             db.session.delete(motion)
             db.session.commit()

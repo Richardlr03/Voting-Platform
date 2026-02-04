@@ -8,4 +8,6 @@ class Option(db.Model):
     motion_id = db.Column(db.Integer, db.ForeignKey("motions.id"), nullable=False)
     text = db.Column(db.String(200), nullable=False)
 
-    votes = db.relationship("Vote", backref="option", lazy=True)
+    yes_no_votes = db.relationship("YesNoVote", backref="option", lazy=True)
+    candidate_votes = db.relationship("CandidateVote", backref="option", lazy=True)
+    preference_votes = db.relationship("PreferenceVote", backref="option", lazy=True)

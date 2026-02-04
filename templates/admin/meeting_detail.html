@@ -505,7 +505,7 @@
               <label for="motionType" class="form-label">Motion Type</label>
               <select class="form-select" id="motionType" name="type" required>
                 <option value="YES_NO">Yes / No / Abstain</option>
-                <option value="CANDIDATE">Candidate election (choose 1)</option>
+                <option value="FPTP">First-Past-The-Post (FPTP)</option>
                 <option value="PREFERENCE">Preference voting (ranked, multiple winners)</option>
               </select>
             </div>
@@ -677,7 +677,7 @@
               <label for="editMotionType" class="form-label">Motion Type</label>
               <select class="form-select" id="editMotionType" name="type" required>
                 <option value="YES_NO">Yes / Abstain</option>
-                <option value="CANDIDATE">Candidate election (choose 1)</option>
+                <option value="FPTP">First-Past-The-Post (FPTP)</option>
                 <option value="PREFERENCE">Preference voting (ranked, multiple winners)</option>
               </select>
             </div>
@@ -759,7 +759,7 @@
 
       function updateMotionVisibility() {
         const t = motionType.value;
-        const needsCandidates = t === "CANDIDATE" || t === "PREFERENCE";
+        const needsCandidates = t === "FPTP" || t === "PREFERENCE";
 
         candidatesGroup.style.display = needsCandidates ? "block" : "none";
 
@@ -968,7 +968,7 @@
 
       function updateEditVisibility() {
         const t = editTypeSelect.value;
-        const needsCandidates = t === "CANDIDATE" || t === "PREFERENCE";
+        const needsCandidates = t === "FPTP" || t === "PREFERENCE";
 
         editCandidatesGroup.style.display = needsCandidates ? "block" : "none";
         

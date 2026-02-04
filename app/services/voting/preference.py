@@ -1,8 +1,7 @@
 def build_ballots_for_motion(motion):
     votes_by_voter = {}
-    for vote in motion.votes:
-        if vote.preference_rank is not None:
-            votes_by_voter.setdefault(vote.voter_id, []).append(vote)
+    for vote in motion.preference_votes:
+        votes_by_voter.setdefault(vote.voter_id, []).append(vote)
 
     ballots = []
     for votes in votes_by_voter.values():

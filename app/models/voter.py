@@ -9,4 +9,6 @@ class Voter(db.Model):
     name = db.Column(db.String(200), nullable=False)
     code = db.Column(db.String(50), unique=True, nullable=False)
 
-    votes = db.relationship("Vote", backref="voter", lazy=True)
+    yes_no_votes = db.relationship("YesNoVote", backref="voter", lazy=True)
+    candidate_votes = db.relationship("CandidateVote", backref="voter", lazy=True)
+    preference_votes = db.relationship("PreferenceVote", backref="voter", lazy=True)

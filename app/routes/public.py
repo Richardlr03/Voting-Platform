@@ -1,8 +1,7 @@
 from flask import flash, redirect, render_template, request, send_from_directory, session, url_for
-from sqlalchemy import and_
 
 from app.extensions import db
-from app.models import Meeting, Motion, Vote, Voter
+from app.models import CandidateVote, Motion, PreferenceVote, Voter, YesNoVote
 
 
 def register_public_routes(app):
@@ -67,7 +66,11 @@ def register_public_routes(app):
 
         meeting = voter.meeting
         motions = meeting.motions
-        voted_motion_ids = {vote.motion_id for vote in voter.votes}
+        voted_motion_ids = {
+            *{vote.motion_id for vote in voter.yes_no_votes},
+            *{vote.motion_id for vote in voter.candidate_votes},
+            *{vote.motion_id for vote in voter.preference_votes},
+        }
 
         return render_template(
             "voter/motion_list.html",
@@ -98,22 +101,27 @@ def register_public_routes(app):
 
         simple_vote = None
         preference_ranks = {}
-        votes_for_motion = [vote for vote in voter.votes if vote.motion_id == motion.id]
-
-        for vote in votes_for_motion:
-            if vote.preference_rank is None:
-                simple_vote = vote
-            else:
+        if motion.type == "PREFERENCE":
+            votes_for_motion = [
+                vote for vote in voter.preference_votes if vote.motion_id == motion.id
+            ]
+            for vote in votes_for_motion:
                 preference_ranks[vote.option_id] = vote.preference_rank
+        elif motion.type == "FPTP":
+            simple_vote = next(
+                (vote for vote in voter.candidate_votes if vote.motion_id == motion.id),
+                None,
+            )
+        else:
+            simple_vote = next(
+                (vote for vote in voter.yes_no_votes if vote.motion_id == motion.id),
+                None,
+            )
 
         if request.method == "POST":
             if motion.type == "PREFERENCE":
-                existing_pref_votes = Vote.query.filter(
-                    and_(
-                        Vote.voter_id == voter.id,
-                        Vote.motion_id == motion.id,
-                        Vote.preference_rank.isnot(None),
-                    )
+                existing_pref_votes = PreferenceVote.query.filter_by(
+                    voter_id=voter.id, motion_id=motion.id
                 ).all()
                 for existing in existing_pref_votes:
                     db.session.delete(existing)
@@ -133,7 +141,7 @@ def register_public_routes(app):
 
                 for rank, option_id in ranks:
                     db.session.add(
-                        Vote(
+                        PreferenceVote(
                             voter_id=voter.id,
                             motion_id=motion.id,
                             option_id=option_id,
@@ -150,16 +158,19 @@ def register_public_routes(app):
                         option_id_int = None
 
                     if option_id_int is not None:
+                        vote_model = CandidateVote if motion.type == "FPTP" else YesNoVote
+                        if simple_vote is None:
+                            simple_vote = vote_model.query.filter_by(
+                                voter_id=voter.id, motion_id=motion.id
+                            ).first()
                         if simple_vote:
                             simple_vote.option_id = option_id_int
-                            simple_vote.preference_rank = None
                         else:
                             db.session.add(
-                                Vote(
+                                vote_model(
                                     voter_id=voter.id,
                                     motion_id=motion.id,
                                     option_id=option_id_int,
-                                    preference_rank=None,
                                 )
                             )
 
