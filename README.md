@@ -3,7 +3,7 @@
 1. cd "C:\Users\Li Zhang Tam\OneDrive - The University of Sydney (Students)\Desktop\Voting Project"
 2. venv\Scripts\activate
 3. Set-ExecutionPolicy -Scope CurrentUser RemoteSigned (if needed)
-4. flask --app app run
+4. flask --app app --debug run
 5. Database Migration: flask --app app db upgrade
 
 ## Commit Messages Guidelines
