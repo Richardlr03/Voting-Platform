@@ -12,7 +12,11 @@ from app.models import (
     YesNoVote,
 )
 from app.services.security import generate_voter_code
-from app.services.voting import tally_candidate_election, tally_preference_sequential_irv
+from app.services.voting import (
+    tally_candidate_election,
+    tally_preference_sequential_irv,
+    tally_yes_no_abstain,
+)
 
 
 def register_admin_routes(app):
@@ -259,28 +263,11 @@ def register_admin_routes(app):
                 )
                 continue
 
-            option_counts = {option.id: 0 for option in motion.options}
-            for vote in motion.yes_no_votes:
-                if vote.option_id in option_counts:
-                    option_counts[vote.option_id] += 1
-
-            total_votes = sum(option_counts.values())
-            option_results = []
-            for option in motion.options:
-                count = option_counts.get(option.id, 0)
-                percent = (count / total_votes * 100) if total_votes > 0 else 0
-                option_results.append(
-                    {"option": option, "count": count, "percent": percent}
-                )
-
             results.append(
                 {
                     "motion": motion,
                     "result_type": motion.type,
-                    "simple": {
-                        "total_votes": total_votes,
-                        "option_results": option_results,
-                    },
+                    "yes_no": tally_yes_no_abstain(motion),
                 }
             )
 
