@@ -177,6 +177,79 @@
                     </div>
                   {% endfor %}
                 </div>
+              {% elif item.result_type == "CANDIDATE" %}
+                {% set candidate = item.candidate %}
+                {% set winner_ids = candidate.winners | map(attribute='id') | list %}
+
+                <hr class="my-3">
+
+                <div class="row g-2 mb-3">
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Ballots</div>
+                      <div class="fw-semibold">{{ candidate.total_votes }}</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Candidates</div>
+                      <div class="fw-semibold">{{ candidate.option_results|length }}</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Top Votes</div>
+                      <div class="fw-semibold">{{ candidate.top_vote_count }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="text-muted small mb-1">Result</div>
+                  {% if candidate.winner %}
+                    <span class="badge text-bg-success">
+                      <i class="bi bi-trophy me-1"></i>{{ candidate.winner.text }}
+                    </span>
+                  {% elif candidate.is_tie and candidate.winners %}
+                    <div class="small text-warning-emphasis mb-1">
+                      <i class="bi bi-exclamation-triangle me-1"></i>Tie for first place
+                    </div>
+                    <div>
+                      {% for option in candidate.winners %}
+                        <span class="badge text-bg-warning me-1 mb-1">{{ option.text }}</span>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <span class="text-muted">No votes have been cast yet.</span>
+                  {% endif %}
+                </div>
+
+                {% if candidate.option_results %}
+                  <div class="vstack gap-2">
+                    {% for row in candidate.option_results %}
+                      {% set is_winner = row.option.id in winner_ids and candidate.top_vote_count > 0 %}
+                      <div class="border rounded-3 p-2 {% if is_winner %}border-success-subtle bg-success-subtle{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                          <div class="fw-semibold">{{ row.option.text }}</div>
+                          <div class="text-end">
+                            <div class="small fw-semibold">{{ row.count }} vote{{ '' if row.count == 1 else 's' }}</div>
+                            <div class="text-muted small">{{ '%.1f'|format(row.percent) }}%</div>
+                          </div>
+                        </div>
+                        <div class="progress mt-2" style="height: 8px;">
+                          <div
+                            class="progress-bar {% if is_winner %}bg-success{% endif %}"
+                            role="progressbar"
+                            style="width: {{ row.percent }}%;"
+                            aria-valuenow="{{ row.percent|round(0) }}"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                          ></div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               {% else %}
                 <hr class="my-3">
                 <div class="text-muted small">
@@ -393,6 +466,96 @@
                     </div>
                   {% endfor %}
                 </div>
+
+              {% elif item.result_type == "CANDIDATE" %}
+                {% set candidate = item.candidate %}
+                {% set winner_ids = candidate.winners | map(attribute='id') | list %}
+
+                <hr class="my-3">
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Total ballots cast</div>
+                      <div class="fs-5 fw-semibold">{{ candidate.total_votes }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Candidates</div>
+                      <div class="fs-5 fw-semibold">{{ candidate.option_results|length }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Top vote count</div>
+                      <div class="fs-5 fw-semibold">{{ candidate.top_vote_count }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="text-muted small mb-1">Result</div>
+                  {% if candidate.winner %}
+                    <span class="badge text-bg-success">
+                      <i class="bi bi-trophy me-1"></i>Winner: {{ candidate.winner.text }}
+                    </span>
+                  {% elif candidate.is_tie and candidate.winners %}
+                    <div class="text-warning-emphasis mb-1">
+                      <i class="bi bi-exclamation-triangle me-1"></i>Tie for first place
+                    </div>
+                    <div>
+                      {% for option in candidate.winners %}
+                        <span class="badge text-bg-warning me-1 mb-1">{{ option.text }}</span>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <span class="text-muted">No votes have been cast yet.</span>
+                  {% endif %}
+                </div>
+
+                {% if candidate.option_results %}
+                  <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Candidate</th>
+                          <th style="width: 120px;" class="text-end">Votes</th>
+                          <th style="width: 130px;" class="text-end">Share</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for row in candidate.option_results %}
+                          {% set is_winner = row.option.id in winner_ids and candidate.top_vote_count > 0 %}
+                          <tr class="{% if is_winner %}table-success{% endif %}">
+                            <td>
+                              <span class="fw-semibold">{{ row.option.text }}</span>
+                              {% if is_winner %}
+                                <span class="badge text-bg-success ms-2">Top</span>
+                              {% endif %}
+                            </td>
+                            <td class="text-end fw-semibold">{{ row.count }}</td>
+                            <td class="text-end">{{ '%.1f'|format(row.percent) }}%</td>
+                          </tr>
+                          <tr>
+                            <td colspan="3" class="pt-0 border-0">
+                              <div class="progress" style="height: 8px;">
+                                <div
+                                  class="progress-bar {% if is_winner %}bg-success{% endif %}"
+                                  role="progressbar"
+                                  style="width: {{ row.percent }}%;"
+                                  aria-valuenow="{{ row.percent|round(0) }}"
+                                  aria-valuemin="0"
+                                  aria-valuemax="100"
+                                ></div>
+                              </div>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% endif %}
 
               {% else %}
                 <!-- Non-preference motions: friendly placeholder (keeps page consistent) -->
