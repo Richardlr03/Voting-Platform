@@ -312,9 +312,9 @@
                           </span>
 
                           {% set status_cls =
-                            'success' if motion.status in ['OPEN', 'APPROVED', 'PASSED']
-                            else 'secondary' if motion.status in ['DRAFT', 'PENDING']
-                            else 'danger' if motion.status in ['REJECTED', 'FAILED', 'CLOSED']
+                            'success' if motion.status == 'OPEN'
+                            else 'secondary' if motion.status == 'DRAFT'
+                            else 'danger' if motion.status == 'CLOSED'
                             else 'info'
                           %}
                           <span class="badge text-bg-{{ status_cls }}">
@@ -512,7 +512,7 @@
 
             <div class="mb-3" id="candidatesGroup">
               <label for="motionCandidates" class="form-label">
-                Candidates (one per line) <span class="text-muted small">(Candidate/Preference)</span>
+                Candidates (one per line)
               </label>
               <textarea
                 class="form-control"
@@ -525,7 +525,7 @@
 
             <div class="mb-3" id="numWinnersGroup">
               <label for="motionNumWinners" class="form-label">
-                Number of winners <span class="text-muted small">(Preference)</span>
+                Number of winners
               </label>
               <input
                 type="number"
