@@ -178,8 +178,8 @@
                   {% endfor %}
                 </div>
               {% elif item.result_type == "FPTP" %}
-                {% set candidate = item.candidate %}
-                {% set winner_ids = candidate.winners | map(attribute='id') | list %}
+                {% set fptp = item.fptp %}
+                {% set winner_ids = fptp.winners | map(attribute='id') | list %}
 
                 <hr class="my-3">
 
@@ -187,35 +187,35 @@
                   <div class="col-4">
                     <div class="p-2 rounded-3 bg-light border text-center">
                       <div class="text-muted small">Ballots</div>
-                      <div class="fw-semibold">{{ candidate.total_votes }}</div>
+                      <div class="fw-semibold">{{ fptp.total_votes }}</div>
                     </div>
                   </div>
                   <div class="col-4">
                     <div class="p-2 rounded-3 bg-light border text-center">
                       <div class="text-muted small">Candidates</div>
-                      <div class="fw-semibold">{{ candidate.option_results|length }}</div>
+                      <div class="fw-semibold">{{ fptp.option_results|length }}</div>
                     </div>
                   </div>
                   <div class="col-4">
                     <div class="p-2 rounded-3 bg-light border text-center">
                       <div class="text-muted small">Top Votes</div>
-                      <div class="fw-semibold">{{ candidate.top_vote_count }}</div>
+                      <div class="fw-semibold">{{ fptp.top_vote_count }}</div>
                     </div>
                   </div>
                 </div>
 
                 <div class="mb-3">
                   <div class="text-muted small mb-1">Result</div>
-                  {% if candidate.winner %}
+                  {% if fptp.winner %}
                     <span class="badge text-bg-success">
-                      <i class="bi bi-trophy me-1"></i>{{ candidate.winner.text }}
+                      <i class="bi bi-trophy me-1"></i>{{ fptp.winner.text }}
                     </span>
-                  {% elif candidate.is_tie and candidate.winners %}
+                  {% elif fptp.is_tie and fptp.winners %}
                     <div class="small text-warning-emphasis mb-1">
                       <i class="bi bi-exclamation-triangle me-1"></i>Tie for first place
                     </div>
                     <div>
-                      {% for option in candidate.winners %}
+                      {% for option in fptp.winners %}
                         <span class="badge text-bg-warning me-1 mb-1">{{ option.text }}</span>
                       {% endfor %}
                     </div>
@@ -224,10 +224,10 @@
                   {% endif %}
                 </div>
 
-                {% if candidate.option_results %}
+                {% if fptp.option_results %}
                   <div class="vstack gap-2">
-                    {% for row in candidate.option_results %}
-                      {% set is_winner = row.option.id in winner_ids and candidate.top_vote_count > 0 %}
+                    {% for row in fptp.option_results %}
+                      {% set is_winner = row.option.id in winner_ids and fptp.top_vote_count > 0 %}
                       <div class="border rounded-3 p-2 {% if is_winner %}border-success-subtle bg-success-subtle{% endif %}">
                         <div class="d-flex justify-content-between align-items-center gap-2">
                           <div class="fw-semibold">{{ row.option.text }}</div>
@@ -250,6 +250,77 @@
                     {% endfor %}
                   </div>
                 {% endif %}
+              {% elif item.result_type == "YES_NO" %}
+                {% set yn = item.yes_no %}
+
+                <hr class="my-3">
+
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Total</div>
+                      <div class="fw-semibold">{{ yn.total_votes }}</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Decisive</div>
+                      <div class="fw-semibold">{{ yn.decisive_votes }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Threshold</div>
+                      <div class="fw-semibold">{{ '%.1f'|format(yn.approved_threshold_pct) }}%</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Yes / (Yes + No)</div>
+                      <div class="fw-semibold">{{ '%.1f'|format(yn.yes_pct_decisive) }}%</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="text-muted small mb-1">Decision</div>
+                  {% if yn.decision == "PASSED" %}
+                    <span class="badge text-bg-success"><i class="bi bi-check-circle me-1"></i>Passed</span>
+                  {% elif yn.decision == "FAILED" %}
+                    <span class="badge text-bg-danger"><i class="bi bi-x-circle me-1"></i>Failed</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary"><i class="bi bi-pause-circle me-1"></i>No decision</span>
+                  {% endif %}
+                </div>
+
+                <div class="vstack gap-2">
+                  {% for row in yn.option_results %}
+                    {% set label = (row.option.text or "")|lower %}
+                    {% set bar_cls = 'bg-success' if label == 'yes' else 'bg-danger' if label == 'no' else 'bg-secondary' %}
+                    <div class="border rounded-3 p-2">
+                      <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div class="fw-semibold">{{ row.option.text }}</div>
+                        <div class="text-end">
+                          <div class="small fw-semibold">{{ row.count }} vote{{ '' if row.count == 1 else 's' }}</div>
+                          <div class="text-muted small">{{ '%.1f'|format(row.percent) }}%</div>
+                        </div>
+                      </div>
+                      <div class="progress mt-2" style="height: 8px;">
+                        <div
+                          class="progress-bar {{ bar_cls }}"
+                          role="progressbar"
+                          style="width: {{ row.percent }}%;"
+                          aria-valuenow="{{ row.percent|round(0) }}"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                        ></div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
               {% else %}
                 <hr class="my-3">
                 <div class="text-muted small">
@@ -346,7 +417,7 @@
                 <div class="row g-3 mb-3">
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
-                      <div class="text-muted small">Preference ballots</div>
+                      <div class="text-muted small">Total ballots cast</div>
                       <div class="fs-5 fw-semibold">{{ pref.total_ballots }}</div>
                     </div>
                   </div>
@@ -468,8 +539,8 @@
                 </div>
 
               {% elif item.result_type == "FPTP" %}
-                {% set candidate = item.candidate %}
-                {% set winner_ids = candidate.winners | map(attribute='id') | list %}
+                {% set fptp = item.fptp %}
+                {% set winner_ids = fptp.winners | map(attribute='id') | list %}
 
                 <hr class="my-3">
 
@@ -477,35 +548,35 @@
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
                       <div class="text-muted small">Total ballots cast</div>
-                      <div class="fs-5 fw-semibold">{{ candidate.total_votes }}</div>
+                      <div class="fs-5 fw-semibold">{{ fptp.total_votes }}</div>
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
                       <div class="text-muted small">Candidates</div>
-                      <div class="fs-5 fw-semibold">{{ candidate.option_results|length }}</div>
+                      <div class="fs-5 fw-semibold">{{ fptp.option_results|length }}</div>
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
                       <div class="text-muted small">Top vote count</div>
-                      <div class="fs-5 fw-semibold">{{ candidate.top_vote_count }}</div>
+                      <div class="fs-5 fw-semibold">{{ fptp.top_vote_count }}</div>
                     </div>
                   </div>
                 </div>
 
                 <div class="mb-3">
                   <div class="text-muted small mb-1">Result</div>
-                  {% if candidate.winner %}
+                  {% if fptp.winner %}
                     <span class="badge text-bg-success">
-                      <i class="bi bi-trophy me-1"></i>Winner: {{ candidate.winner.text }}
+                      <i class="bi bi-trophy me-1"></i>Winner: {{ fptp.winner.text }}
                     </span>
-                  {% elif candidate.is_tie and candidate.winners %}
+                  {% elif fptp.is_tie and fptp.winners %}
                     <div class="text-warning-emphasis mb-1">
                       <i class="bi bi-exclamation-triangle me-1"></i>Tie for first place
                     </div>
                     <div>
-                      {% for option in candidate.winners %}
+                      {% for option in fptp.winners %}
                         <span class="badge text-bg-warning me-1 mb-1">{{ option.text }}</span>
                       {% endfor %}
                     </div>
@@ -514,7 +585,7 @@
                   {% endif %}
                 </div>
 
-                {% if candidate.option_results %}
+                {% if fptp.option_results %}
                   <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                       <thead class="table-light">
@@ -525,8 +596,8 @@
                         </tr>
                       </thead>
                       <tbody>
-                        {% for row in candidate.option_results %}
-                          {% set is_winner = row.option.id in winner_ids and candidate.top_vote_count > 0 %}
+                        {% for row in fptp.option_results %}
+                          {% set is_winner = row.option.id in winner_ids and fptp.top_vote_count > 0 %}
                           <tr class="{% if is_winner %}table-success{% endif %}">
                             <td>
                               <span class="fw-semibold">{{ row.option.text }}</span>
@@ -556,6 +627,87 @@
                     </table>
                   </div>
                 {% endif %}
+
+              {% elif item.result_type == "YES_NO" %}
+                {% set yn = item.yes_no %}
+
+                <hr class="my-3">
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Total ballots cast</div>
+                      <div class="fs-5 fw-semibold">{{ yn.total_votes }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Decisive votes (Yes/No)</div>
+                      <div class="fs-5 fw-semibold">{{ yn.decisive_votes }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Approval threshold</div>
+                      <div class="fs-5 fw-semibold">{{ '%.1f'|format(yn.approved_threshold_pct) }}%</div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Yes share of decisive votes</div>
+                      <div class="fs-5 fw-semibold">{{ '%.1f'|format(yn.yes_pct_decisive) }}%</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="text-muted small mb-1">Decision</div>
+                  {% if yn.decision == "PASSED" %}
+                    <span class="badge text-bg-success"><i class="bi bi-check-circle me-1"></i>Passed</span>
+                  {% elif yn.decision == "FAILED" %}
+                    <span class="badge text-bg-danger"><i class="bi bi-x-circle me-1"></i>Failed</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary"><i class="bi bi-pause-circle me-1"></i>No decision</span>
+                  {% endif %}
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Option</th>
+                        <th style="width: 120px;" class="text-end">Votes</th>
+                        <th style="width: 130px;" class="text-end">Share</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for row in yn.option_results %}
+                        {% set label = (row.option.text or "")|lower %}
+                        {% set row_cls = 'table-success' if label == 'yes' else 'table-danger' if label == 'no' else '' %}
+                        {% set bar_cls = 'bg-success' if label == 'yes' else 'bg-danger' if label == 'no' else 'bg-secondary' %}
+                        <tr class="{{ row_cls }}">
+                          <td><span class="fw-semibold">{{ row.option.text }}</span></td>
+                          <td class="text-end fw-semibold">{{ row.count }}</td>
+                          <td class="text-end">{{ '%.1f'|format(row.percent) }}%</td>
+                        </tr>
+                        <tr>
+                          <td colspan="3" class="pt-0 border-0">
+                            <div class="progress" style="height: 8px;">
+                              <div
+                                class="progress-bar {{ bar_cls }}"
+                                role="progressbar"
+                                style="width: {{ row.percent }}%;"
+                                aria-valuenow="{{ row.percent|round(0) }}"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                              ></div>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
 
               {% else %}
                 <!-- Non-preference motions: friendly placeholder (keeps page consistent) -->

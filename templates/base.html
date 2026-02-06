@@ -13,7 +13,7 @@
     <meta property="og:url" content="{{ request.url_root }}">
     <meta property="og:image" content="{{ url_for('static', filename='Votora_Favicon.png', _external=True) }}">
 
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='Votora_Favicon.png', v='20260203') }}">
@@ -50,6 +50,11 @@
         --vp-accent: #2563eb;
         --vp-accent-2: #38bdf8;
         --vp-glow: rgba(37, 99, 235, 0.35);
+        --vp-nav-offset: 88px;
+      }
+
+      html{
+        overflow-x: hidden;
       }
 
       body{
@@ -57,7 +62,7 @@
         color: var(--vp-ink);
         background: #edf2f8;
         position: relative;
-        overflow-x: hidden;
+        padding-top: var(--vp-nav-offset);
       }
 
       .container{ max-width: 1120px; }
@@ -67,6 +72,12 @@
         background: linear-gradient(125deg, #111827 0%, #0b1220 55%, #121a2b 100%);
         border-bottom: 1px solid rgba(255,255,255,.08);
         backdrop-filter: blur(10px);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 1030;
       }
       .vp-brand-badge{
         width: 44px; height: 44px;
@@ -203,7 +214,7 @@
 
   <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg vp-navbar mb-4">
+    <nav class="navbar navbar-expand-lg vp-navbar">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2 text-white fw-bold" href="{{ url_for('index') }}">
           <div class="vp-brand-badge">
@@ -368,6 +379,22 @@
           showFlashModal(data.type || "info", data.message || "");
         }
       } catch (e) { /* ignore */ }
+
+      // Keep content offset matched to fixed navbar height.
+      (function syncNavOffset() {
+        const nav = document.querySelector(".vp-navbar");
+        if (!nav) return;
+        const applyOffset = () => {
+          document.documentElement.style.setProperty("--vp-nav-offset", `${nav.offsetHeight + 16}px`);
+        };
+        applyOffset();
+        window.addEventListener("resize", applyOffset);
+        const navCollapse = document.getElementById("navbarNav");
+        if (navCollapse) {
+          navCollapse.addEventListener("shown.bs.collapse", applyOffset);
+          navCollapse.addEventListener("hidden.bs.collapse", applyOffset);
+        }
+      })();
     </script>
   </body>
 </html>

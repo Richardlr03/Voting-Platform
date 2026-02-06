@@ -9,6 +9,7 @@ class Motion(db.Model):
     title = db.Column(db.String(200), nullable=False)
     type = db.Column(db.String(50), nullable=False, default="YES_NO")
     num_winners = db.Column(db.Integer, nullable=True)
+    approved_threshold_pct = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="DRAFT")
 
     options = db.relationship("Option", backref="motion", lazy=True)
