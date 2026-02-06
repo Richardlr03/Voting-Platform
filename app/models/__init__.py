@@ -6,6 +6,7 @@ from app.models.preference_vote import PreferenceVote
 from app.models.user import User
 from app.models.voter import Voter
 from app.models.yes_no_vote import YesNoVote
+from app.models.score_vote import ScoreVote
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "YesNoVote",
     "CandidateVote",
     "PreferenceVote",
+    "ScoreVote",
 ]
