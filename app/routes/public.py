@@ -169,7 +169,7 @@ def register_public_routes(app):
                     if value is None or value == "":
                         continue
                     try:
-                        score_value = float(value)
+                        score_value = round(float(value), 1)
                     except ValueError:
                         continue
                     if score_value < 0:

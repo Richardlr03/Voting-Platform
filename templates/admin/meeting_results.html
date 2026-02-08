@@ -694,7 +694,7 @@
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
                       <div class="text-muted small">Total ballots cast</div>
-                      <div class="fs-5 fw-semibold">{{ score.total_votes }}</div>
+                      <div class="fs-5 fw-semibold">{{ (score.total_votes / score.results|length) | int }}</div>
                     </div>
                   </div>
                   <div class="col-md-4">
