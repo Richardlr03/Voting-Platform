@@ -1,7 +1,7 @@
 from flask import flash, redirect, render_template, request, send_from_directory, session, url_for
 
 from app.extensions import db
-from app.models import CandidateVote, Motion, PreferenceVote, Voter, YesNoVote
+from app.models import CandidateVote, Motion, PreferenceVote, ScoreVote, Voter, YesNoVote
 
 
 def register_public_routes(app):
@@ -70,6 +70,7 @@ def register_public_routes(app):
             *{vote.motion_id for vote in voter.yes_no_votes},
             *{vote.motion_id for vote in voter.candidate_votes},
             *{vote.motion_id for vote in voter.preference_votes},
+            *{vote.motion_id for vote in voter.score_votes},
         }
 
         return render_template(
@@ -94,6 +95,7 @@ def register_public_routes(app):
                 motion=None,
                 simple_vote=None,
                 preference_ranks=None,
+                score_values=None,
             )
 
         meeting = voter.meeting
@@ -101,6 +103,7 @@ def register_public_routes(app):
 
         simple_vote = None
         preference_ranks = {}
+        score_values = {}
         if motion.type == "PREFERENCE":
             votes_for_motion = [
                 vote for vote in voter.preference_votes if vote.motion_id == motion.id
@@ -112,6 +115,12 @@ def register_public_routes(app):
                 (vote for vote in voter.candidate_votes if vote.motion_id == motion.id),
                 None,
             )
+        elif motion.type == "SCORE":
+            votes_for_motion = [
+                vote for vote in voter.score_votes if vote.motion_id == motion.id
+            ]
+            for vote in votes_for_motion:
+                score_values[vote.option_id] = vote.score
         else:
             simple_vote = next(
                 (vote for vote in voter.yes_no_votes if vote.motion_id == motion.id),
@@ -148,7 +157,34 @@ def register_public_routes(app):
                             preference_rank=rank,
                         )
                     )
+            elif motion.type == "SCORE":
+                existing_score_votes = ScoreVote.query.filter_by(
+                    voter_id=voter.id, motion_id=motion.id
+                ).all()
+                for existing in existing_score_votes:
+                    db.session.delete(existing)
 
+                for option in motion.options:
+                    value = request.form.get(f"opt_{option.id}_score")
+                    if value is None or value == "":
+                        continue
+                    try:
+                        score_value = float(value)
+                    except ValueError:
+                        continue
+                    if score_value < 0:
+                        continue
+                    if motion.score_max is not None and score_value > motion.score_max:
+                        score_value = float(motion.score_max)
+
+                    db.session.add(
+                        ScoreVote(
+                            voter_id=voter.id,
+                            motion_id=motion.id,
+                            option_id=option.id,
+                            score=score_value,
+                        )
+                    )
             else:
                 selected_option_id = request.form.get("option")
                 if selected_option_id:
@@ -186,4 +222,5 @@ def register_public_routes(app):
             motion=motion,
             simple_vote=simple_vote,
             preference_ranks=preference_ranks,
+            score_values=score_values,
         )

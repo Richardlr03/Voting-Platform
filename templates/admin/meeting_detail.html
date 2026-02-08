@@ -116,6 +116,7 @@
                                 data-motion-status="{{ motion.status }}"
                                 data-motion-winners="{{ motion.num_winners or '' }}"
                                 data-motion-threshold="{{ motion.approved_threshold_pct if motion.approved_threshold_pct is not none else '' }}"
+                                data-motion-score-max="{{ motion.score_max or '' }}"
                                 data-motion-options="{% for c in motion.options %}{{ c.text }}{{ '\n' if not loop.last }}{% endfor %}"
                                 title="Edit Motion">
                           <i class="bi bi-pencil"></i>
@@ -340,6 +341,7 @@
                                 data-motion-status="{{ motion.status }}"
                                 data-motion-winners="{{ motion.num_winners or '' }}"
                                 data-motion-threshold="{{ motion.approved_threshold_pct if motion.approved_threshold_pct is not none else '' }}"
+                                data-motion-score-max="{{ motion.score_max or '' }}"
                                 data-motion-options="{% for c in motion.options %}{{ c.text }}{{ '\n' if not loop.last }}{% endfor %}"
                                 title="Edit Motion">    
                           <i class="bi bi-pencil"></i>
@@ -509,6 +511,7 @@
                 <option value="YES_NO">Yes / No / Abstain</option>
                 <option value="FPTP">First-Past-The-Post (FPTP)</option>
                 <option value="PREFERENCE">Preference voting (ranked, multiple winners)</option>
+                <option value="SCORE">Score voting</option>
               </select>
             </div>
 
@@ -555,6 +558,23 @@
                 value="50"
               >
               <div class="form-text">Yes must reach this percentage of (Yes + No).</div>
+            </div>
+
+            <div class="mb-3" id="scoreMaxGroup">
+              <label for="motionScoreMax" class="form-label">
+                Max score
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                id="motionScoreMax"
+                name="score_max"
+                min="1"
+                step="1"
+                placeholder="e.g. 10"
+                value="10"
+              >
+              <div class="form-text">Highest score a voter can assign.</div>
             </div>
           </div>
 
@@ -699,6 +719,7 @@
                 <option value="YES_NO">Yes / No / Abstain</option>
                 <option value="FPTP">First-Past-The-Post (FPTP)</option>
                 <option value="PREFERENCE">Preference voting (ranked, multiple winners)</option>
+                <option value="SCORE">Score voting</option>
               </select>
             </div>
 
@@ -741,6 +762,22 @@
                 placeholder="e.g. 50"
               >
               <div class="form-text">Yes must reach this percentage of (Yes + No).</div>
+            </div>
+
+            <div class="mb-3" id="editScoreMaxGroup">
+              <label for="editMotionScoreMax" class="form-label">
+                Max score
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                id="editMotionScoreMax"
+                name="score_max"
+                min="1"
+                step="1"
+                placeholder="e.g. 10"
+              >
+              <div class="form-text">Highest score a voter can assign.</div>
             </div>
           <div class="modal-footer bg-light border-0">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -788,6 +825,8 @@
       const numWinnersInput = document.getElementById("motionNumWinners");
       const yesNoThresholdGroup = document.getElementById("yesNoThresholdGroup");
       const yesNoThresholdInput = document.getElementById("motionApprovedThreshold");
+      const scoreMaxGroup = document.getElementById("scoreMaxGroup");
+      const scoreMaxInput = document.getElementById("motionScoreMax");
 
       function setMotionLoading(isLoading) {
         motionSubmit.disabled = isLoading;
@@ -798,7 +837,7 @@
 
       function updateMotionVisibility() {
         const t = motionType.value;
-        const needsCandidates = t === "FPTP" || t === "PREFERENCE";
+        const needsCandidates = t !== "YES_NO";
 
         candidatesGroup.style.display = needsCandidates ? "block" : "none";
 
@@ -810,6 +849,9 @@
         const needsThreshold = t === "YES_NO";
         yesNoThresholdGroup.style.display = needsThreshold ? "block" : "none";
         yesNoThresholdInput.disabled = !needsThreshold;
+        const needsScoreMax = t === "SCORE";
+        scoreMaxGroup.style.display = needsScoreMax ? "block" : "none";
+        scoreMaxInput.disabled = !needsScoreMax;
 
         if (!needsCandidates) {
           document.getElementById("motionCandidates").value = "";
@@ -821,6 +863,11 @@
           yesNoThresholdInput.value = "";
         } else if (!yesNoThresholdInput.value) {
           yesNoThresholdInput.value = "50";
+        }
+        if (!needsScoreMax) {
+          scoreMaxInput.value = "";
+        } else if (!scoreMaxInput.value) {
+          scoreMaxInput.value = "10";
         }
       }
 
@@ -1011,13 +1058,15 @@
       const editWinnersGroup = document.getElementById("editNumWinnersGroup");
       const editThresholdGroup = document.getElementById("editYesNoThresholdGroup");
       const editThresholdInput = document.getElementById("editMotionThreshold");
+      const editScoreMaxGroup = document.getElementById("editScoreMaxGroup");
+      const editScoreMaxInput = document.getElementById("editMotionScoreMax");
 
       const deleteMotionModal = new bootstrap.Modal(document.getElementById('deleteMotionModal'));
       let currentMotionId = null;
 
       function updateEditVisibility() {
         const t = editTypeSelect.value;
-        const needsCandidates = t === "FPTP" || t === "PREFERENCE";
+        const needsCandidates = t !== "YES_NO";
 
         editCandidatesGroup.style.display = needsCandidates ? "block" : "none";
         
@@ -1026,6 +1075,20 @@
         editWinnersGroup.style.display = (t === "PREFERENCE") ? "block" : "none";
         editThresholdGroup.style.display = (t === "YES_NO") ? "block" : "none";
         editThresholdInput.disabled = t !== "YES_NO";
+        editScoreMaxGroup.style.display = (t === "SCORE") ? "block" : "none";
+        editScoreMaxInput.disabled = t !== "SCORE";
+
+        if (t !== "YES_NO") {
+          editThresholdInput.value = "";
+        } else if (!editThresholdInput.value) {
+          editThresholdInput.value = "50";
+        }
+
+        if (t !== "SCORE") {
+          editScoreMaxInput.value = "";
+        } else if (!editScoreMaxInput.value) {
+          editScoreMaxInput.value = "10";
+        }
       }
 
       editTypeSelect.addEventListener("change", updateEditVisibility);
@@ -1043,6 +1106,7 @@
           }
           document.getElementById('editMotionNumWinners').value = btn.dataset.motionWinners;
           editThresholdInput.value = btn.dataset.motionThreshold || "50";
+          editScoreMaxInput.value = btn.dataset.motionScoreMax || "10";
           
           updateEditVisibility();
           editMotionModal.show();

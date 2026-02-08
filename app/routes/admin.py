@@ -8,6 +8,7 @@ from app.models import (
     Motion,
     Option,
     PreferenceVote,
+    ScoreVote,
     Voter,
     YesNoVote,
 )
@@ -15,6 +16,7 @@ from app.services.security import generate_voter_code
 from app.services.voting import (
     tally_candidate_election,
     tally_preference_sequential_irv,
+    tally_score_votes,
     tally_yes_no_abstain,
 )
 
@@ -84,6 +86,9 @@ def register_admin_routes(app):
             PreferenceVote.query.filter(PreferenceVote.motion_id.in_(motion_ids)).delete(
                 synchronize_session=False
             )
+            ScoreVote.query.filter(ScoreVote.motion_id.in_(motion_ids)).delete(
+                synchronize_session=False
+            )
             Option.query.filter(Option.motion_id.in_(motion_ids)).delete(
                 synchronize_session=False
             )
@@ -99,6 +104,9 @@ def register_admin_routes(app):
                 synchronize_session=False
             )
             PreferenceVote.query.filter(PreferenceVote.voter_id.in_(voter_ids)).delete(
+                synchronize_session=False
+            )
+            ScoreVote.query.filter(ScoreVote.voter_id.in_(voter_ids)).delete(
                 synchronize_session=False
             )
             Voter.query.filter(Voter.id.in_(voter_ids)).delete(synchronize_session=False)
@@ -151,7 +159,7 @@ def register_admin_routes(app):
                 flash(error["error"], "error")
                 return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
-            if motion_type not in ("YES_NO", "FPTP", "PREFERENCE"):
+            if motion_type not in ("YES_NO", "FPTP", "PREFERENCE", "SCORE"):
                 error = {"ok": False, "error": "Invalid motion type."}
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return error, 400
@@ -178,6 +186,15 @@ def register_admin_routes(app):
                 except ValueError:
                     approved_threshold_pct = 50.0
 
+            score_max = None
+            if motion_type == "SCORE":
+                score_max_raw = (request.form.get("score_max") or "").strip()
+                try:
+                    parsed_score_max = int(score_max_raw) if score_max_raw else 10
+                    score_max = parsed_score_max if parsed_score_max >= 1 else 1
+                except ValueError:
+                    score_max = 10
+
             motion = Motion(
                 meeting_id=meeting.id,
                 title=title,
@@ -185,6 +202,7 @@ def register_admin_routes(app):
                 status="DRAFT",
                 num_winners=num_winners,
                 approved_threshold_pct=approved_threshold_pct,
+                score_max=score_max,
             )
             db.session.add(motion)
             db.session.flush()
@@ -192,7 +210,7 @@ def register_admin_routes(app):
             if motion_type == "YES_NO":
                 for option_text in ("Yes", "No", "Abstain"):
                     db.session.add(Option(motion_id=motion.id, text=option_text))
-            elif motion_type in ("FPTP", "PREFERENCE") and candidate_text:
+            elif motion_type in ("FPTP", "PREFERENCE", "SCORE") and candidate_text:
                 lines = [line.strip() for line in candidate_text.splitlines() if line.strip()]
                 for name in lines:
                     db.session.add(Option(motion_id=motion.id, text=name))
@@ -208,6 +226,7 @@ def register_admin_routes(app):
                         "type": motion.type,
                         "num_winners": motion.num_winners,
                         "approved_threshold_pct": motion.approved_threshold_pct,
+                        "score_max": motion.score_max,
                     },
                 }
 
@@ -280,6 +299,17 @@ def register_admin_routes(app):
                 )
                 continue
 
+            if motion.type == "SCORE":
+                score_result = tally_score_votes(motion)
+                results.append(
+                    {
+                        "motion": motion,
+                        "result_type": motion.type,
+                        "score": score_result,
+                    }
+                )
+                continue
+
             results.append(
                 {
                     "motion": motion,
@@ -306,6 +336,8 @@ def register_admin_routes(app):
                 votes_for_motion = motion.preference_votes
             elif motion.type == "FPTP":
                 votes_for_motion = motion.candidate_votes
+            elif motion.type == "SCORE":
+                votes_for_motion = motion.score_votes
             else:
                 votes_for_motion = motion.yes_no_votes
 
@@ -327,6 +359,10 @@ def register_admin_routes(app):
                     for item in sorted_votes:
                         parts.append(f"{item.preference_rank}: {item.option.text}")
                     choice_display = ", ".join(parts)
+                elif motion.type == "SCORE":
+                    choice_display = ", ".join(
+                        f"{item.option.text}: {item.score}" for item in vote_list
+                    )
                 else:
                     choice_display = ", ".join(item.option.text for item in vote_list)
 
@@ -402,6 +438,16 @@ def register_admin_routes(app):
         else:
             motion.approved_threshold_pct = None
 
+        score_max_raw = (request.form.get("score_max") or "").strip()
+        if motion.type == "SCORE":
+            try:
+                parsed_score_max = int(score_max_raw) if score_max_raw else 10
+                motion.score_max = parsed_score_max if parsed_score_max >= 1 else 1
+            except ValueError:
+                motion.score_max = 10
+        else:
+            motion.score_max = None
+
         new_status = request.form.get("status")
         if new_status:
             allowed_statuses = {
@@ -418,12 +464,15 @@ def register_admin_routes(app):
                 return jsonify({"error": "Invalid status value"}), 400
             motion.status = new_status
 
-        if motion.type in ["FPTP", "PREFERENCE"]:
+        if motion.type in ["FPTP", "PREFERENCE", "SCORE"]:
             try:
                 CandidateVote.query.filter_by(motion_id=motion.id).delete(
                     synchronize_session=False
                 )
                 PreferenceVote.query.filter_by(motion_id=motion.id).delete(
+                    synchronize_session=False
+                )
+                ScoreVote.query.filter_by(motion_id=motion.id).delete(
                     synchronize_session=False
                 )
             except Exception:
@@ -456,6 +505,9 @@ def register_admin_routes(app):
                 synchronize_session=False
             )
             PreferenceVote.query.filter_by(motion_id=motion.id).delete(
+                synchronize_session=False
+            )
+            ScoreVote.query.filter_by(motion_id=motion.id).delete(
                 synchronize_session=False
             )
             Option.query.filter_by(motion_id=motion.id).delete(synchronize_session=False)
