@@ -36,19 +36,13 @@
             else 'info'
           %}
 
-          {% set type_cls =
-            'primary' if motion.type in ['YES_NO']
-            else 'warning' if motion.type in ['FPTP']
-            else 'info'
-          %}
-
           <div class="card border-0 shadow-sm rounded-4">
             <div class="card-body p-3">
               <div class="d-flex align-items-start justify-content-between gap-2">
                 <div>
                   <h2 class="h6 mb-1">{{ motion.title }}</h2>
                   <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <span class="badge text-bg-{{ type_cls }}">
+                    <span class="badge bg-white text-dark border">
                       <i class="bi bi-tag me-1"></i>{{ motion.type }}
                     </span>
                     <span class="badge text-bg-{{ status_cls }}">
@@ -442,15 +436,9 @@
           {% set motion = item.motion %}
 
           {% set status_cls =
-            'success' if motion.status in ['OPEN', 'APPROVED', 'PASSED']
-            else 'secondary' if motion.status in ['DRAFT', 'PENDING']
-            else 'danger' if motion.status in ['REJECTED', 'FAILED', 'CLOSED']
-            else 'info'
-          %}
-
-          {% set type_cls =
-            'primary' if motion.type in ['YES_NO']
-            else 'warning' if motion.type in ['FPTP']
+            'success' if motion.status == 'OPEN'
+            else 'secondary' if motion.status == 'DRAFT'
+            else 'danger' if motion.status == 'CLOSED'
             else 'info'
           %}
 
@@ -462,7 +450,7 @@
                 <div>
                   <h2 class="h5 mb-1">{{ motion.title }}</h2>
                   <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <span class="badge text-bg-{{ type_cls }}">
+                    <span class="badge bg-white text-dark border">
                       <i class="bi bi-tag me-1"></i>{{ motion.type }}
                     </span>
                     <span class="badge text-bg-{{ status_cls }}">
