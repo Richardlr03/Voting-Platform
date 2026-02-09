@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.models import (
     CandidateVote,
+    CumulativeVote,
     Meeting,
     Motion,
     Option,
@@ -83,6 +84,9 @@ def register_admin_routes(app):
             CandidateVote.query.filter(CandidateVote.motion_id.in_(motion_ids)).delete(
                 synchronize_session=False
             )
+            CumulativeVote.query.filter(
+                CumulativeVote.motion_id.in_(motion_ids)
+            ).delete(synchronize_session=False)
             PreferenceVote.query.filter(PreferenceVote.motion_id.in_(motion_ids)).delete(
                 synchronize_session=False
             )
@@ -103,6 +107,9 @@ def register_admin_routes(app):
             CandidateVote.query.filter(CandidateVote.voter_id.in_(voter_ids)).delete(
                 synchronize_session=False
             )
+            CumulativeVote.query.filter(
+                CumulativeVote.voter_id.in_(voter_ids)
+            ).delete(synchronize_session=False)
             PreferenceVote.query.filter(PreferenceVote.voter_id.in_(voter_ids)).delete(
                 synchronize_session=False
             )
@@ -159,7 +166,7 @@ def register_admin_routes(app):
                 flash(error["error"], "error")
                 return redirect(url_for("meeting_detail", meeting_id=meeting.id))
 
-            if motion_type not in ("YES_NO", "FPTP", "PREFERENCE", "SCORE"):
+            if motion_type not in ("YES_NO", "FPTP", "PREFERENCE", "SCORE", "CUMULATIVE"):
                 error = {"ok": False, "error": "Invalid motion type."}
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return error, 400
@@ -195,6 +202,15 @@ def register_admin_routes(app):
                 except ValueError:
                     score_max = 10
 
+            budget_points = None
+            if motion_type == "CUMULATIVE":
+                budget_raw = (request.form.get("budget_points") or "").strip()
+                try:
+                    parsed_budget = int(budget_raw) if budget_raw else 10
+                    budget_points = parsed_budget if parsed_budget >= 1 else 1
+                except ValueError:
+                    budget_points = 10
+
             motion = Motion(
                 meeting_id=meeting.id,
                 title=title,
@@ -203,6 +219,7 @@ def register_admin_routes(app):
                 num_winners=num_winners,
                 approved_threshold_pct=approved_threshold_pct,
                 score_max=score_max,
+                budget_points=budget_points,
             )
             db.session.add(motion)
             db.session.flush()
@@ -210,7 +227,7 @@ def register_admin_routes(app):
             if motion_type == "YES_NO":
                 for option_text in ("Yes", "No", "Abstain"):
                     db.session.add(Option(motion_id=motion.id, text=option_text))
-            elif motion_type in ("FPTP", "PREFERENCE", "SCORE") and candidate_text:
+            elif motion_type in ("FPTP", "PREFERENCE", "SCORE", "CUMULATIVE") and candidate_text:
                 lines = [line.strip() for line in candidate_text.splitlines() if line.strip()]
                 for name in lines:
                     db.session.add(Option(motion_id=motion.id, text=name))
@@ -227,6 +244,7 @@ def register_admin_routes(app):
                         "num_winners": motion.num_winners,
                         "approved_threshold_pct": motion.approved_threshold_pct,
                         "score_max": motion.score_max,
+                        "budget_points": motion.budget_points,
                     },
                 }
 
@@ -448,6 +466,16 @@ def register_admin_routes(app):
         else:
             motion.score_max = None
 
+        budget_raw = (request.form.get("budget_points") or "").strip()
+        if motion.type == "CUMULATIVE":
+            try:
+                parsed_budget = int(budget_raw) if budget_raw else 10
+                motion.budget_points = parsed_budget if parsed_budget >= 1 else 1
+            except ValueError:
+                motion.budget_points = 10
+        else:
+            motion.budget_points = None
+
         new_status = request.form.get("status")
         if new_status:
             allowed_statuses = {
@@ -464,7 +492,7 @@ def register_admin_routes(app):
                 return jsonify({"error": "Invalid status value"}), 400
             motion.status = new_status
 
-        if motion.type in ["FPTP", "PREFERENCE", "SCORE"]:
+        if motion.type in ["FPTP", "PREFERENCE", "SCORE", "CUMULATIVE"]:
             try:
                 CandidateVote.query.filter_by(motion_id=motion.id).delete(
                     synchronize_session=False
@@ -473,6 +501,9 @@ def register_admin_routes(app):
                     synchronize_session=False
                 )
                 ScoreVote.query.filter_by(motion_id=motion.id).delete(
+                    synchronize_session=False
+                )
+                CumulativeVote.query.filter_by(motion_id=motion.id).delete(
                     synchronize_session=False
                 )
             except Exception:
@@ -502,6 +533,9 @@ def register_admin_routes(app):
                 synchronize_session=False
             )
             CandidateVote.query.filter_by(motion_id=motion.id).delete(
+                synchronize_session=False
+            )
+            CumulativeVote.query.filter_by(motion_id=motion.id).delete(
                 synchronize_session=False
             )
             PreferenceVote.query.filter_by(motion_id=motion.id).delete(
