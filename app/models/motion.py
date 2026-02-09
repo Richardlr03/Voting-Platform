@@ -11,6 +11,7 @@ class Motion(db.Model):
     num_winners = db.Column(db.Integer, nullable=True)
     approved_threshold_pct = db.Column(db.Float, nullable=True)
     score_max = db.Column(db.Integer, nullable=True)
+    budget_points = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="DRAFT")
 
     options = db.relationship("Option", backref="motion", lazy=True)
@@ -18,3 +19,4 @@ class Motion(db.Model):
     candidate_votes = db.relationship("CandidateVote", backref="motion", lazy=True)
     preference_votes = db.relationship("PreferenceVote", backref="motion", lazy=True)
     score_votes = db.relationship("ScoreVote", backref="motion", lazy=True)
+    cumulative_votes = db.relationship("CumulativeVote", backref="motion", lazy=True)

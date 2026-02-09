@@ -1,4 +1,5 @@
 from app.models.candidate_vote import CandidateVote
+from app.models.cumulative_vote import CumulativeVote
 from app.models.meeting import Meeting
 from app.models.motion import Motion
 from app.models.option import Option
@@ -16,6 +17,7 @@ __all__ = [
     "Voter",
     "YesNoVote",
     "CandidateVote",
+    "CumulativeVote",
     "PreferenceVote",
     "ScoreVote",
 ]
