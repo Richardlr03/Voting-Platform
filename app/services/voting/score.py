@@ -5,6 +5,7 @@ def tally_score_votes(motion):
     level_counts = {option_id: {} for option_id in options_by_id}
 
     observed_scores = set()
+    voter_ids = set()
 
     for vote in motion.score_votes:
         if vote.option_id in totals:
@@ -15,6 +16,7 @@ def tally_score_votes(motion):
                 level_counts[vote.option_id].get(score_value, 0) + 1
             )
             observed_scores.add(score_value)
+            voter_ids.add(vote.voter_id)
 
     results = []
     for option_id, option in options_by_id.items():
@@ -68,6 +70,7 @@ def tally_score_votes(motion):
 
     return {
         "total_votes": sum(counts.values()),
+        "ballot_count": len(voter_ids),
         "results": results,
         "winner": winner,
         "winners": winners,

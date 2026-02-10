@@ -254,7 +254,7 @@
                   <div class="col-4">
                     <div class="p-2 rounded-3 bg-light border text-center">
                       <div class="text-muted small">Ballots</div>
-                      <div class="fw-semibold">{{ score.total_votes }}</div>
+                      <div class="fw-semibold">{{ score.ballot_count }}</div>
                     </div>
                   </div>
                   <div class="col-4">
@@ -323,13 +323,7 @@
                   <div class="col-4">
                     <div class="p-2 rounded-3 bg-light border text-center">
                       <div class="text-muted small">Ballots</div>
-                      <div class="fw-semibold">
-                        {% if cumulative.results|length %}
-                          {{ (cumulative.total_votes / cumulative.results|length) | int }}
-                        {% else %}
-                          0
-                        {% endif %}
-                      </div>
+                      <div class="fw-semibold">{{ cumulative.ballot_count }}</div>
                     </div>
                   </div>
                   <div class="col-4">
@@ -769,7 +763,7 @@
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
                       <div class="text-muted small">Total ballots cast</div>
-                      <div class="fs-5 fw-semibold">{{ (score.total_votes / score.results|length) | int }}</div>
+                      <div class="fs-5 fw-semibold">{{ score.ballot_count }}</div>
                     </div>
                   </div>
                   <div class="col-md-4">
@@ -854,13 +848,7 @@
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
                       <div class="text-muted small">Total ballots cast</div>
-                      <div class="fs-5 fw-semibold">
-                        {% if cumulative.results|length %}
-                          {{ (cumulative.total_votes / cumulative.results|length) | int }}
-                        {% else %}
-                          0
-                        {% endif %}
-                      </div>
+                      <div class="fs-5 fw-semibold">{{ cumulative.ballot_count }}</div>
                     </div>
                   </div>
                   <div class="col-md-4">
