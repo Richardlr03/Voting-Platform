@@ -208,6 +208,7 @@
       .vp-flash-message {
           color: rgba(15, 23, 42, 0.75);
           margin-bottom: 16px;
+          white-space: pre-line;
       }
     </style>
   </head>
@@ -274,7 +275,7 @@
           {% set message = visible[0][1] %}
           {% set bs =
             'success' if category == 'success'
-            else 'danger' if category == 'error'
+            else 'danger' if category in ['error', 'danger']
             else 'warning' if category == 'warning'
             else 'info'
           %}
@@ -291,7 +292,9 @@
                   <i class="bi bi-info-circle-fill"></i>
                 {% endif %}
               </div>
-              <div class="vp-flash-title text-{{ bs }}">{{ bs|upper }}</div>
+              <div class="vp-flash-title text-{{ bs }}">
+                {% if bs == 'danger' %}FAILED{% else %}{{ bs|upper }}{% endif %}
+              </div>
               <div class="vp-flash-message">{{ message }}</div>
               <button class="btn btn-primary px-4" id="flashOkBtn">OK</button>
             </div>

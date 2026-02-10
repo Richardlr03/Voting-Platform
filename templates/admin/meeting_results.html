@@ -254,7 +254,7 @@
                   <div class="col-4">
                     <div class="p-2 rounded-3 bg-light border text-center">
                       <div class="text-muted small">Ballots</div>
-                      <div class="fw-semibold">{{ score.total_votes }}</div>
+                      <div class="fw-semibold">{{ score.ballot_count }}</div>
                     </div>
                   </div>
                   <div class="col-4">
@@ -302,6 +302,75 @@
                   <div class="vstack gap-2">
                     {% for row in score.results %}
                       {% set is_winner = row.option.id in winner_ids and score.results[0].total > 0 %}
+                      <div class="border rounded-3 p-2 {% if is_winner %}border-success-subtle bg-success-subtle{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                          <div class="fw-semibold">{{ row.option.text }}</div>
+                          <div class="text-end">
+                            <div class="small fw-semibold">Total: {{ '%.1f'|format(row.total) }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              {% elif item.result_type == "CUMULATIVE" %}
+                {% set cumulative = item.cumulative %}
+                {% set winner_ids = cumulative.winners | map(attribute='id') | list %}
+
+                <hr class="my-3">
+
+                <div class="row g-2 mb-3">
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Ballots</div>
+                      <div class="fw-semibold">{{ cumulative.ballot_count }}</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Candidates</div>
+                      <div class="fw-semibold">{{ cumulative.results|length }}</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="p-2 rounded-3 bg-light border text-center">
+                      <div class="text-muted small">Top Total</div>
+                      <div class="fw-semibold">
+                        {% if cumulative.results %}{{ '%.1f'|format(cumulative.results[0].total) }}{% else %}0{% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="text-muted small mb-1">Result</div>
+                  {% if cumulative.winner %}
+                    <span class="badge text-bg-success">
+                      <i class="bi bi-trophy me-1"></i>{{ cumulative.winner.text }}
+                    </span>
+                  {% elif cumulative.is_tie and cumulative.winners %}
+                    <div class="small text-warning-emphasis mb-1">
+                      <i class="bi bi-exclamation-triangle me-1"></i>Tie on total points
+                    </div>
+                    <div>
+                      {% for option in cumulative.winners %}
+                        <span class="badge text-bg-warning me-1 mb-1">{{ option.text }}</span>
+                      {% endfor %}
+                    </div>
+                    {% if cumulative.deadlock %}
+                      <div class="small text-muted mt-1">
+                        Same distribution at all point levels.
+                      </div>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">No votes have been cast yet.</span>
+                  {% endif %}
+                </div>
+
+                {% if cumulative.results %}
+                  <div class="vstack gap-2">
+                    {% for row in cumulative.results %}
+                      {% set is_winner = row.option.id in winner_ids and cumulative.results[0].total > 0 %}
                       <div class="border rounded-3 p-2 {% if is_winner %}border-success-subtle bg-success-subtle{% endif %}">
                         <div class="d-flex justify-content-between align-items-center gap-2">
                           <div class="fw-semibold">{{ row.option.text }}</div>
@@ -694,7 +763,7 @@
                   <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-light border">
                       <div class="text-muted small">Total ballots cast</div>
-                      <div class="fs-5 fw-semibold">{{ (score.total_votes / score.results|length) | int }}</div>
+                      <div class="fs-5 fw-semibold">{{ score.ballot_count }}</div>
                     </div>
                   </div>
                   <div class="col-md-4">
@@ -754,6 +823,92 @@
                       <tbody>
                         {% for row in score.results %}
                           {% set is_winner = row.option.id in winner_ids and score.results[0].total > 0 %}
+                          <tr class="{% if is_winner %}table-success{% endif %}">
+                            <td>
+                              <span class="fw-semibold">{{ row.option.text }}</span>
+                              {% if is_winner %}
+                                <span class="badge text-bg-success ms-2">Top</span>
+                              {% endif %}
+                            </td>
+                            <td class="text-end fw-semibold">{{ '%.1f'|format(row.total) }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% endif %}
+
+              {% elif item.result_type == "CUMULATIVE" %}
+                {% set cumulative = item.cumulative %}
+                {% set winner_ids = cumulative.winners | map(attribute='id') | list %}
+
+                <hr class="my-3">
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Total ballots cast</div>
+                      <div class="fs-5 fw-semibold">{{ cumulative.ballot_count }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Candidates</div>
+                      <div class="fs-5 fw-semibold">{{ cumulative.results|length }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border">
+                      <div class="text-muted small">Top total points</div>
+                      <div class="fs-5 fw-semibold">
+                        {% if cumulative.results %}{{ '%.1f'|format(cumulative.results[0].total) }}{% else %}0{% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <div class="text-muted small mb-1">Result</div>
+                  {% if cumulative.winner %}
+                    <span class="badge text-bg-success">
+                      <i class="bi bi-trophy me-1"></i>Winner: {{ cumulative.winner.text }}
+                    </span>
+                    {% if cumulative.tie_break_level is not none %}
+                      <div class="text-muted small mt-1">
+                        Tie-break resolved at point level {{ cumulative.tie_break_level }}.
+                      </div>
+                    {% endif %}
+                  {% elif cumulative.is_tie and cumulative.winners %}
+                    <div class="text-warning-emphasis mb-1">
+                      <i class="bi bi-exclamation-triangle me-1"></i>Tie on total points
+                    </div>
+                    <div>
+                      {% for option in cumulative.winners %}
+                        <span class="badge text-bg-warning me-1 mb-1">{{ option.text }}</span>
+                      {% endfor %}
+                    </div>
+                    {% if cumulative.deadlock %}
+                      <div class="text-muted small mt-1">
+                        Same distribution at all point levels
+                      </div>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">No votes have been cast yet.</span>
+                  {% endif %}
+                </div>
+
+                {% if cumulative.results %}
+                  <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Candidate</th>
+                          <th style="width: 120px;" class="text-end">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for row in cumulative.results %}
+                          {% set is_winner = row.option.id in winner_ids and cumulative.results[0].total > 0 %}
                           <tr class="{% if is_winner %}table-success{% endif %}">
                             <td>
                               <span class="fw-semibold">{{ row.option.text }}</span>

@@ -1,21 +1,21 @@
-def tally_score_votes(motion):
+def tally_cumulative_votes(motion):
     options_by_id = {option.id: option for option in motion.options}
     totals = {option_id: 0.0 for option_id in options_by_id}
     counts = {option_id: 0 for option_id in options_by_id}
     level_counts = {option_id: {} for option_id in options_by_id}
 
-    observed_scores = set()
+    observed_points = set()
     voter_ids = set()
 
-    for vote in motion.score_votes:
+    for vote in motion.cumulative_votes:
         if vote.option_id in totals:
-            score_value = float(vote.score)
-            totals[vote.option_id] += score_value
+            points_value = float(vote.points)
+            totals[vote.option_id] += points_value
             counts[vote.option_id] += 1
-            level_counts[vote.option_id][score_value] = (
-                level_counts[vote.option_id].get(score_value, 0) + 1
+            level_counts[vote.option_id][points_value] = (
+                level_counts[vote.option_id].get(points_value, 0) + 1
             )
-            observed_scores.add(score_value)
+            observed_points.add(points_value)
             voter_ids.add(vote.voter_id)
 
     results = []
@@ -43,10 +43,10 @@ def tally_score_votes(motion):
             winner = options_by_id[tied[0]]
             winners = [winner]
         else:
-            score_levels = sorted(observed_scores, reverse=True)
+            point_levels = sorted(observed_points, reverse=True)
 
             remaining = tied
-            for level in score_levels:
+            for level in point_levels:
                 counts_at_level = {
                     option_id: level_counts[option_id].get(level, 0)
                     for option_id in remaining

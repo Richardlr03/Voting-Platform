@@ -1,7 +1,15 @@
 from flask import flash, redirect, render_template, request, send_from_directory, session, url_for
 
 from app.extensions import db
-from app.models import CandidateVote, Motion, PreferenceVote, ScoreVote, Voter, YesNoVote
+from app.models import (
+    CandidateVote,
+    CumulativeVote,
+    Motion,
+    PreferenceVote,
+    ScoreVote,
+    Voter,
+    YesNoVote,
+)
 
 
 def register_public_routes(app):
@@ -71,6 +79,7 @@ def register_public_routes(app):
             *{vote.motion_id for vote in voter.candidate_votes},
             *{vote.motion_id for vote in voter.preference_votes},
             *{vote.motion_id for vote in voter.score_votes},
+            *{vote.motion_id for vote in voter.cumulative_votes},
         }
 
         return render_template(
@@ -104,6 +113,7 @@ def register_public_routes(app):
         simple_vote = None
         preference_ranks = {}
         score_values = {}
+        cumulative_values = {}
         if motion.type == "PREFERENCE":
             votes_for_motion = [
                 vote for vote in voter.preference_votes if vote.motion_id == motion.id
@@ -121,6 +131,12 @@ def register_public_routes(app):
             ]
             for vote in votes_for_motion:
                 score_values[vote.option_id] = vote.score
+        elif motion.type == "CUMULATIVE":
+            votes_for_motion = [
+                vote for vote in voter.cumulative_votes if vote.motion_id == motion.id
+            ]
+            for vote in votes_for_motion:
+                cumulative_values[vote.option_id] = vote.points
         else:
             simple_vote = next(
                 (vote for vote in voter.yes_no_votes if vote.motion_id == motion.id),
@@ -185,6 +201,84 @@ def register_public_routes(app):
                             score=score_value,
                         )
                     )
+            elif motion.type == "CUMULATIVE":
+                existing_votes = CumulativeVote.query.filter_by(
+                    voter_id=voter.id, motion_id=motion.id
+                ).all()
+                for existing in existing_votes:
+                    db.session.delete(existing)
+
+                budget = motion.budget_points
+                if budget is None:
+                    flash("Budget is not set for this motion.", "danger")
+                    return render_template(
+                        "voter/vote_motion.html",
+                        invalid=False,
+                        voter=voter,
+                        meeting=meeting,
+                        motion=motion,
+                        simple_vote=simple_vote,
+                        preference_ranks=preference_ranks,
+                        score_values=score_values,
+                        cumulative_values=cumulative_values,
+                    )
+
+                total_points = 0.0
+                cumulative_values = {}
+                for option in motion.options:
+                    raw_value = request.form.get(f"opt_{option.id}_points")
+                    if raw_value is None or raw_value == "":
+                        points_value = 0.0
+                    else:
+                        try:
+                            points_value = float(raw_value)
+                        except ValueError:
+                            points_value = 0.0
+                    if points_value < 0:
+                        flash("Points cannot be negative.", "danger")
+                        cumulative_values[option.id] = points_value
+                        return render_template(
+                            "voter/vote_motion.html",
+                            invalid=False,
+                            voter=voter,
+                            meeting=meeting,
+                            motion=motion,
+                            simple_vote=simple_vote,
+                            preference_ranks=preference_ranks,
+                            score_values=score_values,
+                            cumulative_values=cumulative_values,
+                        )
+
+                    total_points += points_value
+                    cumulative_values[option.id] = points_value
+
+                if abs(total_points - float(budget)) > 1e-6:
+                    flash(
+                        f"You must allocate exactly {budget} points.\nCurrent total: {total_points}.",
+                        "danger",
+                    )
+                    return render_template(
+                        "voter/vote_motion.html",
+                        invalid=False,
+                        voter=voter,
+                        meeting=meeting,
+                        motion=motion,
+                        simple_vote=simple_vote,
+                        preference_ranks=preference_ranks,
+                        score_values=score_values,
+                        cumulative_values=cumulative_values,
+                    )
+
+                for option in motion.options:
+                    points_value = cumulative_values.get(option.id, 0.0)
+                    db.session.add(
+                        CumulativeVote(
+                            voter_id=voter.id,
+                            motion_id=motion.id,
+                            option_id=option.id,
+                            points=points_value,
+                        )
+                    )
             else:
                 selected_option_id = request.form.get("option")
                 if selected_option_id:
@@ -223,4 +317,5 @@ def register_public_routes(app):
             simple_vote=simple_vote,
             preference_ranks=preference_ranks,
             score_values=score_values,
+            cumulative_values=cumulative_values,
         )

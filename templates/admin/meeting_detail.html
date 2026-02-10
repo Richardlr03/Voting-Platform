@@ -117,6 +117,7 @@
                                 data-motion-winners="{{ motion.num_winners or '' }}"
                                 data-motion-threshold="{{ motion.approved_threshold_pct if motion.approved_threshold_pct is not none else '' }}"
                                 data-motion-score-max="{{ motion.score_max or '' }}"
+                                data-motion-budget="{{ motion.budget_points or '' }}"
                                 data-motion-options="{% for c in motion.options %}{{ c.text }}{{ '\n' if not loop.last }}{% endfor %}"
                                 title="Edit Motion">
                           <i class="bi bi-pencil"></i>
@@ -342,6 +343,7 @@
                                 data-motion-winners="{{ motion.num_winners or '' }}"
                                 data-motion-threshold="{{ motion.approved_threshold_pct if motion.approved_threshold_pct is not none else '' }}"
                                 data-motion-score-max="{{ motion.score_max or '' }}"
+                                data-motion-budget="{{ motion.budget_points or '' }}"
                                 data-motion-options="{% for c in motion.options %}{{ c.text }}{{ '\n' if not loop.last }}{% endfor %}"
                                 title="Edit Motion">    
                           <i class="bi bi-pencil"></i>
@@ -512,6 +514,7 @@
                 <option value="FPTP">First-Past-The-Post (FPTP)</option>
                 <option value="PREFERENCE">Preference voting (ranked, multiple winners)</option>
                 <option value="SCORE">Score voting</option>
+                <option value="CUMULATIVE">Cumulative voting</option>
               </select>
             </div>
 
@@ -575,6 +578,22 @@
                 value="10"
               >
               <div class="form-text">Highest score a voter can assign.</div>
+            </div>
+
+            <div class="mb-3" id="budgetPointsGroup">
+              <label for="motionBudgetPoints" class="form-label">
+                Budget points
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                id="motionBudgetPoints"
+                name="budget_points"
+                min="1"
+                step="1"
+                placeholder="e.g. 20"
+              >
+              <div class="form-text">Total points each voter must distribute.</div>
             </div>
           </div>
 
@@ -720,6 +739,7 @@
                 <option value="FPTP">First-Past-The-Post (FPTP)</option>
                 <option value="PREFERENCE">Preference voting (ranked, multiple winners)</option>
                 <option value="SCORE">Score voting</option>
+                <option value="CUMULATIVE">Cumulative voting</option>
               </select>
             </div>
 
@@ -779,6 +799,22 @@
               >
               <div class="form-text">Highest score a voter can assign.</div>
             </div>
+
+            <div class="mb-3" id="editBudgetPointsGroup">
+              <label for="editMotionBudgetPoints" class="form-label">
+                Budget points
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                id="editMotionBudgetPoints"
+                name="budget_points"
+                min="1"
+                step="1"
+                placeholder="e.g. 20"
+              >
+              <div class="form-text">Total points each voter must distribute.</div>
+            </div>
           <div class="modal-footer bg-light border-0">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-primary" id="editMotionSubmit">Save Changes</button>
@@ -827,6 +863,8 @@
       const yesNoThresholdInput = document.getElementById("motionApprovedThreshold");
       const scoreMaxGroup = document.getElementById("scoreMaxGroup");
       const scoreMaxInput = document.getElementById("motionScoreMax");
+      const budgetPointsGroup = document.getElementById("budgetPointsGroup");
+      const budgetPointsInput = document.getElementById("motionBudgetPoints");
 
       function setMotionLoading(isLoading) {
         motionSubmit.disabled = isLoading;
@@ -852,6 +890,9 @@
         const needsScoreMax = t === "SCORE";
         scoreMaxGroup.style.display = needsScoreMax ? "block" : "none";
         scoreMaxInput.disabled = !needsScoreMax;
+        const needsBudgetPoints = t === "CUMULATIVE";
+        budgetPointsGroup.style.display = needsBudgetPoints ? "block" : "none";
+        budgetPointsInput.disabled = !needsBudgetPoints;
 
         if (!needsCandidates) {
           document.getElementById("motionCandidates").value = "";
@@ -868,6 +909,11 @@
           scoreMaxInput.value = "";
         } else if (!scoreMaxInput.value) {
           scoreMaxInput.value = "10";
+        }
+        if (!needsBudgetPoints) {
+          budgetPointsInput.value = "";
+        } else if (!budgetPointsInput.value) {
+          budgetPointsInput.value = "10";
         }
       }
 
@@ -1060,6 +1106,8 @@
       const editThresholdInput = document.getElementById("editMotionThreshold");
       const editScoreMaxGroup = document.getElementById("editScoreMaxGroup");
       const editScoreMaxInput = document.getElementById("editMotionScoreMax");
+      const editBudgetPointsGroup = document.getElementById("editBudgetPointsGroup");
+      const editBudgetPointsInput = document.getElementById("editMotionBudgetPoints");
 
       const deleteMotionModal = new bootstrap.Modal(document.getElementById('deleteMotionModal'));
       let currentMotionId = null;
@@ -1077,6 +1125,8 @@
         editThresholdInput.disabled = t !== "YES_NO";
         editScoreMaxGroup.style.display = (t === "SCORE") ? "block" : "none";
         editScoreMaxInput.disabled = t !== "SCORE";
+        editBudgetPointsGroup.style.display = (t === "CUMULATIVE") ? "block" : "none";
+        editBudgetPointsInput.disabled = t !== "CUMULATIVE";
 
         if (t !== "YES_NO") {
           editThresholdInput.value = "";
@@ -1088,6 +1138,12 @@
           editScoreMaxInput.value = "";
         } else if (!editScoreMaxInput.value) {
           editScoreMaxInput.value = "10";
+        }
+
+        if (t !== "CUMULATIVE") {
+          editBudgetPointsInput.value = "";
+        } else if (!editBudgetPointsInput.value) {
+          editBudgetPointsInput.value = "10";
         }
       }
 
@@ -1107,6 +1163,7 @@
           document.getElementById('editMotionNumWinners').value = btn.dataset.motionWinners;
           editThresholdInput.value = btn.dataset.motionThreshold || "50";
           editScoreMaxInput.value = btn.dataset.motionScoreMax || "10";
+          editBudgetPointsInput.value = btn.dataset.motionBudget || "10";
           
           updateEditVisibility();
           editMotionModal.show();

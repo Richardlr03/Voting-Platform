@@ -91,6 +91,36 @@
                 </div>
               {% endfor %}
             </div>
+          {% elif motion.type == "CUMULATIVE" %}
+            <div class="mb-3">
+              <h2 class="h6 fw-bold">Distribute your budget</h2>
+              <p class="text-muted small mb-0">
+                You must allocate exactly {{ motion.budget_points or 0 }} points across all candidates.
+              </p>
+            </div>
+
+            <div class="vstack gap-2">
+              {% for opt in motion.options %}
+                {% set existing_points = cumulative_values.get(opt.id) if cumulative_values else '' %}
+                <div class="d-flex align-items-center justify-content-between gap-2 border rounded-3 p-2">
+                  <div class="fw-medium">{{ opt.text }}</div>
+                  <input
+                    type="number"
+                    class="form-control form-control-sm text-center fw-bold border-primary-subtle cumulative-points-input"
+                    name="opt_{{ opt.id }}_points"
+                    min="0"
+                    step="0.1"
+                    value="{{ existing_points }}"
+                    placeholder="0"
+                    style="width: 90px;"
+                  >
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="py-2 px-3 mt-3 rounded-3 bg-info-subtle border border-info-subtle" id="totalPointsMobile">
+              Total allocated: <strong><span id="totalPointsMobileValue">0</span></strong> points
+            </div>
           {% else %}
             <div class="mb-3">
               <h2 class="h6 fw-bold">
@@ -188,7 +218,7 @@
                 <thead class="table-light">
                   <tr class="small text-uppercase text-muted">
                     <th>Candidate / Option</th>
-                    <th style="width: 100px;">Rank</th>
+                    <th style="width: 100px;" class="text-center">Rank</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,7 +226,7 @@
                     {% set existing_rank = preference_ranks.get(opt.id) if preference_ranks else '' %}
                     <tr>
                       <td class="fw-medium text-dark">{{ opt.text }}</td>
-                      <td>
+                      <td class="text-center">
                         <input
                           type="number"
                           class="form-control form-control-sm text-center fw-bold border-primary-subtle"
@@ -226,7 +256,7 @@
                 <thead class="table-light">
                   <tr class="small text-uppercase text-muted">
                     <th>Candidate / Option</th>
-                    <th style="width: 120px;" class="text-end">Score</th>
+                    <th style="width: 120px;" class="text-center">Score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,7 +264,7 @@
                     {% set existing_score = score_values.get(opt.id) if score_values else '' %}
                     <tr>
                       <td class="fw-medium text-dark">{{ opt.text }}</td>
-                      <td class="text-end">
+                      <td class="text-center">
                         <input
                           type="number"
                           class="form-control form-control-sm text-center fw-bold border-primary-subtle"
@@ -250,6 +280,48 @@
                   {% endfor %}
                 </tbody>
               </table>
+            </div>
+          {% elif motion.type == "CUMULATIVE" %}
+            <div class="mb-4">
+              <h2 class="h6 fw-bold">Distribute your budget</h2>
+              <p class="text-muted small mb-0">
+                You must allocate exactly {{ motion.budget_points or 0 }} points across all candidates.
+              </p>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr class="small text-uppercase text-muted">
+                    <th>Candidate / Option</th>
+                    <th style="width: 120px;" class="text-center">Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for opt in motion.options %}
+                    {% set existing_points = cumulative_values.get(opt.id) if cumulative_values else '' %}
+                    <tr>
+                      <td class="fw-medium text-dark">{{ opt.text }}</td>
+                      <td class="text-center">
+                        <input
+                          type="number"
+                          class="form-control form-control-sm text-center fw-bold border-primary-subtle cumulative-points-input"
+                          name="opt_{{ opt.id }}_points"
+                          min="0"
+                          step="0.1"
+                          value="{{ existing_points }}"
+                          placeholder="0"
+                        >
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center py-2 px-3 mt-3 rounded-3 bg-info-subtle border border-info-subtle" id="totalPointsDesktop">
+              <span class="small text-muted">Total allocated</span>
+              <strong class="me-4"><span id="totalPointsDesktopValue">0</span></strong>
             </div>
           {% else %}
             <div class="mb-4">
@@ -327,4 +399,39 @@
     border-color: #0d6efd;
   }
 </style>
+
+<script>
+  (function initCumulativeBudget() {
+    const inputs = document.querySelectorAll(".cumulative-points-input");
+    if (!inputs.length) return;
+
+    const mobileValue = document.getElementById("totalPointsMobileValue");
+    const desktopValue = document.getElementById("totalPointsDesktopValue");
+
+    function readValue(input) {
+      const raw = (input.value || "").trim();
+      if (raw === "") return 0;
+      const num = Number(raw);
+      return Number.isFinite(num) ? num : 0;
+    }
+
+    function updateTotal() {
+      let total = 0;
+      inputs.forEach((input) => {
+        if (input.offsetParent === null) return;
+        total += readValue(input);
+      });
+      const display = Number.isFinite(total) ? total.toFixed(1) : "0.0";
+
+      if (mobileValue) mobileValue.textContent = display;
+      if (desktopValue) desktopValue.textContent = display;
+    }
+
+    inputs.forEach((input) => {
+      input.addEventListener("input", updateTotal);
+    });
+
+    updateTotal();
+  })();
+</script>
 {% endblock %}
