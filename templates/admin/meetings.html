@@ -314,6 +314,63 @@
     });
 
     document.addEventListener("DOMContentLoaded", function () {
+        const createMeetingModalEl = document.getElementById("createMeetingModal");
+        const createMeetingModal = new bootstrap.Modal(createMeetingModalEl);
+        const createMeetingForm = document.getElementById("createMeetingForm");
+        const createMeetingSubmit = document.getElementById("createMeetingSubmit");
+        const createMeetingError = document.getElementById("createMeetingError");
+
+        function setCreateMeetingLoading(isLoading) {
+            createMeetingSubmit.disabled = isLoading;
+            createMeetingSubmit.innerHTML = isLoading
+                ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...'
+                : "Create Meeting";
+        }
+
+        createMeetingForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            createMeetingError.classList.add("d-none");
+            setCreateMeetingLoading(true);
+
+            const formData = new FormData(createMeetingForm);
+            try {
+                const response = await fetch(createMeetingForm.dataset.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                });
+
+                if (!response.ok) {
+                    let message = "Failed to create meeting.";
+                    try {
+                        const data = await response.json();
+                        if (data && data.error) message = data.error;
+                    } catch (err) { /* ignore parse errors */ }
+                    throw new Error(message);
+                }
+
+                createMeetingModal.hide();
+                try {
+                    sessionStorage.setItem("vpFlash", JSON.stringify({
+                        type: "success",
+                        message: "Meeting created successfully."
+                    }));
+                } catch (e) { /* ignore */ }
+                window.location.reload();
+            } catch (err) {
+                createMeetingError.textContent = err.message;
+                createMeetingError.classList.remove("d-none");
+            } finally {
+                setCreateMeetingLoading(false);
+            }
+        });
+
+        createMeetingModalEl.addEventListener("hidden.bs.modal", () => {
+            createMeetingForm.reset();
+            createMeetingError.classList.add("d-none");
+            setCreateMeetingLoading(false);
+        });
+
         const deleteModalEl = document.getElementById('deleteConfirmModal');
         const deleteModal = new bootstrap.Modal(deleteModalEl);
         const confirmDeleteBtn = document.getElementById('confirmDeleteSubmit');
