@@ -1,5 +1,5 @@
 from flask import abort, flash, jsonify, redirect, render_template, request, url_for
-from datetime import datetime
+from datetime import date, datetime, time
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -25,10 +25,29 @@ from app.services.voting import (
 
 
 def register_admin_routes(app):
+    def parse_time_value(raw_value):
+        if not raw_value:
+            return None
+        for fmt in ("%H:%M", "%H:%M:%S"):
+            try:
+                return datetime.strptime(raw_value, fmt).time()
+            except ValueError:
+                continue
+        return None
+
     @app.route("/admin/meetings")
     @login_required
     def admin_meetings():
         meetings = Meeting.query.filter_by(admin_id=current_user.id).all()
+        meetings.sort(
+            key=lambda meeting: (
+                meeting.meeting_date is None,
+                meeting.meeting_date or date.max,
+                meeting.start_time is None,
+                meeting.start_time or time.max,
+                meeting.id,
+            )
+        )
         return render_template("admin/meetings.html", meetings=meetings)
 
     @app.route("/admin/meetings/new", methods=["GET", "POST"])
@@ -50,19 +69,8 @@ def register_admin_routes(app):
             except ValueError:
                 meeting_date = None
 
-        start_time = None
-        if start_time_raw:
-            try:
-                start_time = datetime.strptime(start_time_raw, "%H:%M").time()
-            except ValueError:
-                start_time = None
-
-        end_time = None
-        if end_time_raw:
-            try:
-                end_time = datetime.strptime(end_time_raw, "%H:%M").time()
-            except ValueError:
-                end_time = None
+        start_time = parse_time_value(start_time_raw)
+        end_time = parse_time_value(end_time_raw)
 
         if not title:
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -197,19 +205,8 @@ def register_admin_routes(app):
             except ValueError:
                 meeting.meeting_date = None
 
-        meeting.start_time = None
-        if start_time_raw:
-            try:
-                meeting.start_time = datetime.strptime(start_time_raw, "%H:%M").time()
-            except ValueError:
-                meeting.start_time = None
-
-        meeting.end_time = None
-        if end_time_raw:
-            try:
-                meeting.end_time = datetime.strptime(end_time_raw, "%H:%M").time()
-            except ValueError:
-                meeting.end_time = None
+        meeting.start_time = parse_time_value(start_time_raw)
+        meeting.end_time = parse_time_value(end_time_raw)
 
         if not meeting.title:
             flash("Title is required.", "danger")
