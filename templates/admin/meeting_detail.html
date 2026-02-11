@@ -674,34 +674,6 @@
     </div>
   </div>
 
-  <!--Edit Meeting Details Modal-->
-  <div class="modal fade" id="editMeetingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow">
-        <div class="modal-header bg-light border-0">
-          <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Meeting Details</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <form id="editMeetingForm" method="POST" action="{{ url_for('update_meeting', meeting_id=meeting.id) }}">
-          <div class="modal-body p-4">
-            <div class="mb-3">
-              <label for="editMeetingTitle" class="form-label fw-semibold">Meeeting Title</label>
-              <input type="text" class="form-control" id="editMeetingTitle" name="title" value="{{ meeting.title }}" required>
-            </div>
-            <div class="mb-3">
-              <label for="editMeetingDescription" class="form-label fw-semibold">Description</label>
-              <textarea type="text" class="form-control" id="editMeetingDescription" name="description" value="{{ meeting.description }}" required></textarea>
-            </div>
-          </div>
-          <div class="modal-footer bg-light border-0">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <!--Edit Motion Modal-->
   <div class="modal fade" id="editMotionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
